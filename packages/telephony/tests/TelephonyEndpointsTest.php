@@ -28,11 +28,18 @@ class TelephonyEndpointsTest extends TestCase
         $user = User::factory()->create();
         $team = $user->currentTeam;
 
-        $agent = Agent::factory()->for($team)->create();
+        $agent = Agent::factory()->for($team)->create([
+            'knowledge' => 'Legacy inline knowledge.',
+        ]);
 
         $this->actingAs($user)
             ->get(route('dashboard', $team))
-            ->assertOk();
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->where('telephony.agents.0.id', $agent->id)
+                ->missing('telephony.agents.0.knowledge'),
+            );
     }
 
     public function test_team_calls_are_scoped_and_paginated(): void
