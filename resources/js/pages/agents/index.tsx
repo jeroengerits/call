@@ -468,7 +468,7 @@ export default function AgentsIndex({
                                 <Empty>
                                     <EmptyHeader>
                                         <EmptyMedia variant="icon">
-                                            <Bot />
+                                            <Bot aria-hidden="true" />
                                         </EmptyMedia>
                                         <EmptyTitle>
                                             {agents.length === 0

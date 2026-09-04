@@ -64,7 +64,8 @@ export default function KnowledgeIndex({ agents, phoneNumbersCount }: Props) {
                                 Agent knowledge
                             </CardTitle>
                             <CardDescription>
-                                {agents.length} agent
+                                Sources are managed per agent. {agents.length}{' '}
+                                agent
                                 {agents.length === 1 ? '' : 's'} in this team
                             </CardDescription>
                         </CardHeader>

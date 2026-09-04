@@ -311,7 +311,7 @@ export default function PhoneNumbersIndex({
                                 <Empty>
                                     <EmptyHeader>
                                         <EmptyMedia variant="icon">
-                                            <Phone />
+                                            <Phone aria-hidden="true" />
                                         </EmptyMedia>
                                         <EmptyTitle>
                                             {phoneNumbers.length === 0

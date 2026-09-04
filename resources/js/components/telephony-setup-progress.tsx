@@ -18,7 +18,7 @@ const steps = [
         key: 'phoneNumbers',
         title: 'Add a phone number',
         description: 'Give callers a number they can reach.',
-        action: 'Set up phone numbers',
+        action: 'Add a phone number',
         manageAction: 'Manage phone numbers',
         icon: Phone,
         getUrl: (teamSlug: string) => phoneNumbers(teamSlug).url,
@@ -27,7 +27,7 @@ const steps = [
         key: 'agents',
         title: 'Create an agent',
         description: 'Set the voice and guidance for your calls.',
-        action: 'Configure agents',
+        action: 'Create an agent',
         manageAction: 'Manage agents',
         icon: Bot,
         getUrl: (teamSlug: string) => agents(teamSlug).url,
@@ -36,7 +36,7 @@ const steps = [
         key: 'knowledgeSources',
         title: 'Add knowledge sources',
         description: 'Help your agent answer with your information.',
-        action: 'Manage knowledge',
+        action: 'Add knowledge sources',
         manageAction: 'Manage knowledge',
         icon: BookOpen,
         getUrl: (teamSlug: string) => knowledge(teamSlug).url,
@@ -124,6 +124,7 @@ export default function TelephonySetupProgress({
                                 title,
                                 description,
                                 action,
+                                manageAction,
                                 getUrl,
                                 icon: Icon,
                             },
@@ -178,7 +179,7 @@ export default function TelephonySetupProgress({
                                             href={getUrl(currentTeamSlug)}
                                             className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium"
                                         >
-                                            {isComplete ? 'Manage' : action}
+                                            {isComplete ? manageAction : action}
                                             <ArrowRight
                                                 className="size-3.5"
                                                 aria-hidden="true"
