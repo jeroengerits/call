@@ -13,6 +13,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class AgentKnowledgeSourceController extends Controller
 {
@@ -50,17 +51,30 @@ class AgentKnowledgeSourceController extends Controller
         $validated = $request->validated();
         $attachment = $request->file('attachment');
 
-        $source = $agent->knowledgeSources()->create([
-            'type' => $validated['type'],
-            'title' => $validated['title'],
-            'url' => $validated['url'] ?? null,
-            'content' => $validated['content'] ?? null,
-            'storage_path' => $attachment?->store("knowledge/{$agent->id}", 'local'),
-            'original_filename' => $attachment?->getClientOriginalName(),
-            'mime_type' => $attachment?->getClientMimeType(),
-            'file_size' => $attachment?->getSize(),
-            'status' => KnowledgeSourceStatus::Pending,
-        ]);
+        $storagePath = null;
+
+        try {
+            $storagePath = $attachment?->store("knowledge/{$agent->id}", (string) config('filesystems.default'));
+
+            $source = $agent->knowledgeSources()->create([
+                'type' => $validated['type'],
+                'title' => $validated['title'],
+                'url' => $validated['type'] === KnowledgeSourceType::Url->value ? $validated['url'] : null,
+                'content' => $validated['type'] === KnowledgeSourceType::Text->value ? $validated['content'] : null,
+                'storage_path' => $storagePath,
+                'original_filename' => $attachment !== null ? $attachment->getClientOriginalName() : null,
+                'mime_type' => $attachment !== null ? $attachment->getClientMimeType() : null,
+                'file_size' => $attachment?->getSize(),
+                'status' => KnowledgeSourceStatus::Pending,
+                'processing_at' => null,
+            ]);
+        } catch (Throwable $exception) {
+            if ($storagePath !== null) {
+                Storage::disk((string) config('filesystems.default'))->delete($storagePath);
+            }
+
+            throw $exception;
+        }
 
         ProcessAgentKnowledgeSource::dispatch($source);
 
@@ -79,6 +93,7 @@ class AgentKnowledgeSourceController extends Controller
             'status' => KnowledgeSourceStatus::Pending,
             'content' => $source->type === KnowledgeSourceType::Text ? $source->content : null,
             'error_message' => null,
+            'processing_at' => null,
         ]);
 
         ProcessAgentKnowledgeSource::dispatch($source);
@@ -93,7 +108,7 @@ class AgentKnowledgeSourceController extends Controller
         $source = $agent->knowledgeSources()->findOrFail($request->route('knowledge_source'));
 
         if ($source->storage_path !== null) {
-            Storage::disk('local')->delete($source->storage_path);
+            Storage::disk((string) config('filesystems.default'))->delete($source->storage_path);
         }
 
         $source->delete();

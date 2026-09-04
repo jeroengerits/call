@@ -34,18 +34,18 @@ class KnowledgeSourceProcessingTest extends TestCase
 
     public function test_url_sources_fetch_body_with_successful_response(): void
     {
-        Http::fake(['https://example.test/guide' => Http::response('Remote guide content.', 200)]);
+        Http::fake(['https://example.com/guide' => Http::response('Remote guide content.', 200)]);
         $source = AgentKnowledgeSource::factory()->create([
             'type' => KnowledgeSourceType::Url,
             'content' => null,
-            'url' => 'https://example.test/guide',
+            'url' => 'https://example.com/guide',
         ]);
 
         (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
 
         $this->assertSame(KnowledgeSourceStatus::Ready, $source->refresh()->status);
         $this->assertSame('Remote guide content.', $source->content);
-        Http::assertSent(fn ($request): bool => $request->url() === 'https://example.test/guide');
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://example.com/guide');
     }
 
     public function test_plain_text_attachments_are_processed_to_ready(): void
@@ -68,11 +68,11 @@ class KnowledgeSourceProcessingTest extends TestCase
 
     public function test_http_status_failures_are_persisted_without_ready_content(): void
     {
-        Http::fake(['https://example.test/missing' => Http::response('Not found', 404)]);
+        Http::fake(['https://example.com/missing' => Http::response('Not found', 404)]);
         $source = AgentKnowledgeSource::factory()->create([
             'type' => KnowledgeSourceType::Url,
             'content' => null,
-            'url' => 'https://example.test/missing',
+            'url' => 'https://example.com/missing',
         ]);
 
         (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
@@ -83,13 +83,29 @@ class KnowledgeSourceProcessingTest extends TestCase
         $this->assertNull($source->content);
     }
 
-    public function test_unavailable_urls_are_persisted_as_failed(): void
+    public function test_url_redirects_are_not_followed(): void
     {
-        Http::fake(['https://example.test/down' => Http::failedConnection()]);
+        Http::fake(['https://example.com/redirect' => Http::response('', 302, ['Location' => 'http://127.0.0.1/admin'])]);
         $source = AgentKnowledgeSource::factory()->create([
             'type' => KnowledgeSourceType::Url,
             'content' => null,
-            'url' => 'https://example.test/down',
+            'url' => 'https://example.com/redirect',
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
+
+        $this->assertSame(KnowledgeSourceStatus::Failed, $source->refresh()->status);
+        $this->assertSame('URL fetch failed with HTTP status 302.', $source->error_message);
+        Http::assertSentCount(1);
+    }
+
+    public function test_unavailable_urls_are_persisted_as_failed(): void
+    {
+        Http::fake(['https://example.com/down' => Http::failedConnection()]);
+        $source = AgentKnowledgeSource::factory()->create([
+            'type' => KnowledgeSourceType::Url,
+            'content' => null,
+            'url' => 'https://example.com/down',
         ]);
 
         (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
@@ -135,5 +151,36 @@ class KnowledgeSourceProcessingTest extends TestCase
         $source->refresh();
         $this->assertSame(KnowledgeSourceStatus::Failed, $source->status);
         $this->assertSame('Attachment format is not supported for text extraction.', $source->error_message);
+    }
+
+    public function test_stale_processing_sources_can_be_reclaimed(): void
+    {
+        Http::fake(['https://example.com/stale' => Http::response('Recovered content.')]);
+        $source = AgentKnowledgeSource::factory()->create([
+            'type' => KnowledgeSourceType::Url,
+            'url' => 'https://example.com/stale',
+            'status' => KnowledgeSourceStatus::Processing,
+            'processing_at' => now()->subMinutes(11),
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
+
+        $this->assertSame(KnowledgeSourceStatus::Ready, $source->refresh()->status);
+        $this->assertNull($source->processing_at);
+    }
+
+    public function test_queue_failure_marks_processing_source_as_failed(): void
+    {
+        $source = AgentKnowledgeSource::factory()->create([
+            'status' => KnowledgeSourceStatus::Processing,
+            'processing_at' => now(),
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->failed(new \RuntimeException('Worker timed out.'));
+
+        $source->refresh();
+        $this->assertSame(KnowledgeSourceStatus::Failed, $source->status);
+        $this->assertSame('Worker timed out.', $source->error_message);
+        $this->assertNull($source->processing_at);
     }
 }

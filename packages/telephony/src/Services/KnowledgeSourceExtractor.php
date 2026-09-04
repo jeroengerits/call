@@ -11,6 +11,8 @@ use RuntimeException;
 
 class KnowledgeSourceExtractor
 {
+    public function __construct(private readonly UrlSafety $urlSafety) {}
+
     public function extract(AgentKnowledgeSource $source): string
     {
         return match ($source->type) {
@@ -35,7 +37,10 @@ class KnowledgeSourceExtractor
             throw new RuntimeException('URL knowledge source has no URL.');
         }
 
-        $response = Http::connectTimeout(5)
+        $this->urlSafety->assertSafe($source->url);
+
+        $response = Http::withoutRedirecting()
+            ->connectTimeout(5)
             ->timeout(10)
             ->get($source->url);
 
@@ -63,7 +68,7 @@ class KnowledgeSourceExtractor
             throw new RuntimeException('Attachment has no storage path.');
         }
 
-        $disk = Storage::disk();
+        $disk = Storage::disk((string) config('filesystems.default'));
 
         if (! $disk->exists($source->storage_path)) {
             throw new RuntimeException('Attachment is unavailable in storage.');

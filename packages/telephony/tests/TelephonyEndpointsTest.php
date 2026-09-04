@@ -151,14 +151,14 @@ class TelephonyEndpointsTest extends TestCase
             ->post(route('knowledge-sources.store', [$team, $agent]), [
                 'type' => 'url',
                 'title' => 'Support guide',
-                'url' => 'https://example.test/guide',
+                'url' => 'https://example.com/guide',
             ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('agent_knowledge_sources', [
             'agent_id' => $agent->id,
             'type' => 'url',
-            'url' => 'https://example.test/guide',
+            'url' => 'https://example.com/guide',
             'status' => 'pending',
         ]);
     }
@@ -177,10 +177,29 @@ class TelephonyEndpointsTest extends TestCase
             ->assertSessionHasErrors(['url']);
     }
 
+    public function test_url_knowledge_sources_reject_private_addresses_and_irrelevant_fields(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+
+        $this->actingAs($user)
+            ->post(route('knowledge-sources.store', [$team, $agent]), [
+                'type' => 'url',
+                'title' => 'Internal guide',
+                'url' => 'http://127.0.0.1/admin',
+                'content' => 'Must not be stored.',
+            ])
+            ->assertSessionHasErrors(['url']);
+
+        $this->assertDatabaseCount('agent_knowledge_sources', 0);
+    }
+
     public function test_attachment_knowledge_sources_are_stored_on_the_private_disk(): void
     {
         Queue::fake();
-        Storage::fake();
+        config(['filesystems.default' => 'testing']);
+        Storage::fake('testing');
         $user = User::factory()->create();
         $team = $user->currentTeam;
         $agent = Agent::factory()->for($team)->create();
@@ -195,7 +214,7 @@ class TelephonyEndpointsTest extends TestCase
             ->assertRedirect();
 
         $source = AgentKnowledgeSource::query()->firstOrFail();
-        Storage::assertExists($source->storage_path);
+        Storage::disk('testing')->assertExists($source->storage_path);
         $this->assertSame('guide.md', $source->original_filename);
         $this->assertSame(10 * 1024, $source->file_size);
     }
@@ -245,11 +264,12 @@ class TelephonyEndpointsTest extends TestCase
 
     public function test_destroying_a_knowledge_source_removes_its_private_file(): void
     {
-        Storage::fake();
+        config(['filesystems.default' => 'testing']);
+        Storage::fake('testing');
         $user = User::factory()->create();
         $team = $user->currentTeam;
         $agent = Agent::factory()->for($team)->create();
-        Storage::put('knowledge/'.$agent->id.'/guide.md', '# Guide');
+        Storage::disk('testing')->put('knowledge/'.$agent->id.'/guide.md', '# Guide');
         $source = AgentKnowledgeSource::factory()->for($agent)->create([
             'type' => KnowledgeSourceType::Attachment,
             'storage_path' => 'knowledge/'.$agent->id.'/guide.md',
@@ -260,7 +280,52 @@ class TelephonyEndpointsTest extends TestCase
             ->delete(route('knowledge-sources.destroy', [$team, $agent, $source]))
             ->assertRedirect();
 
-        Storage::assertMissing($source->storage_path);
+        Storage::disk('testing')->assertMissing($source->storage_path);
         $this->assertDatabaseMissing('agent_knowledge_sources', ['id' => $source->id]);
+    }
+
+    public function test_knowledge_sources_are_not_visible_across_teams(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $otherTeam = Team::factory()->create();
+        $agent = Agent::factory()->for($team)->create();
+        AgentKnowledgeSource::factory()->for($agent)->create();
+        $otherAgent = Agent::factory()->for($otherTeam)->create();
+
+        $this->actingAs($user)
+            ->get(route('knowledge-sources.index', [$otherTeam, $otherAgent]))
+            ->assertForbidden();
+    }
+
+    public function test_retry_cannot_target_a_source_from_another_agent(): void
+    {
+        Queue::fake();
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+        $otherAgent = Agent::factory()->for($team)->create();
+        $source = AgentKnowledgeSource::factory()->for($otherAgent)->create(['status' => KnowledgeSourceStatus::Failed]);
+
+        $this->actingAs($user)
+            ->post(route('knowledge-sources.retry', [$team, $agent, $source]))
+            ->assertNotFound();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_destroy_cannot_delete_a_source_from_another_agent(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+        $otherAgent = Agent::factory()->for($team)->create();
+        $source = AgentKnowledgeSource::factory()->for($otherAgent)->create();
+
+        $this->actingAs($user)
+            ->delete(route('knowledge-sources.destroy', [$team, $agent, $source]))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('agent_knowledge_sources', ['id' => $source->id]);
     }
 }

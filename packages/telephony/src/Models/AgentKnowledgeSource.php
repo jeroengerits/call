@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'file_size',
     'status',
     'error_message',
+    'processing_at',
 ])]
 class AgentKnowledgeSource extends Model
 {
@@ -47,6 +48,7 @@ class AgentKnowledgeSource extends Model
             'type' => KnowledgeSourceType::class,
             'status' => KnowledgeSourceStatus::class,
             'file_size' => 'integer',
+            'processing_at' => 'datetime',
         ];
     }
 }

@@ -3,8 +3,10 @@
 namespace Call\Telephony\Http\Requests;
 
 use Call\Telephony\Enums\KnowledgeSourceType;
+use Call\Telephony\Services\UrlSafety;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreKnowledgeSourceRequest extends FormRequest
 {
@@ -29,5 +31,18 @@ class StoreKnowledgeSourceRequest extends FormRequest
                 'max:10240',
             ],
         ];
+    }
+
+    protected function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->input('type') === KnowledgeSourceType::Url->value && is_string($this->input('url'))) {
+                $message = app(UrlSafety::class)->validate($this->input('url'));
+
+                if ($message !== null) {
+                    $validator->errors()->add('url', $message);
+                }
+            }
+        });
     }
 }
