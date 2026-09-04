@@ -31,11 +31,6 @@ export function AppSidebar() {
     const callHistoryUrl = page.props.currentTeam
         ? calls(page.props.currentTeam.slug).url
         : '/';
-    const agentsUrl = dashboardUrl.replace(/\/dashboard$/, '/agents');
-    const phoneNumbersUrl = dashboardUrl.replace(
-        /\/dashboard$/,
-        '/phone-numbers',
-    );
 
     const mainNavItems: NavItem[] = [
         {

@@ -13,6 +13,7 @@
 ### Task 1: Add source enums, model, migration, and factory
 
 **Files:**
+
 - Create: `packages/telephony/src/Enums/KnowledgeSourceType.php`
 - Create: `packages/telephony/src/Enums/KnowledgeSourceStatus.php`
 - Create: `packages/telephony/src/Models/AgentKnowledgeSource.php`
@@ -48,6 +49,7 @@ Expected: PASS, including package migration rollback/reapply coverage updated fo
 ### Task 2: Add extraction service and queued processing
 
 **Files:**
+
 - Create: `packages/telephony/src/Services/KnowledgeSourceExtractor.php`
 - Create: `packages/telephony/src/Jobs/ProcessAgentKnowledgeSource.php`
 - Modify: `packages/telephony/src/Enums/KnowledgeSourceStatus.php`
@@ -78,6 +80,7 @@ Run the focused test file and expect PASS with the test queue configured synchro
 ### Task 3: Add source validation, storage, and team-scoped endpoints
 
 **Files:**
+
 - Create: `packages/telephony/src/Http/Requests/StoreKnowledgeSourceRequest.php`
 - Create: `packages/telephony/src/Http/Controllers/AgentKnowledgeSourceController.php`
 - Modify: `routes/web.php`
@@ -109,6 +112,7 @@ Register GET/POST/DELETE routes under the existing authenticated, verified, memb
 ### Task 4: Serialize agent sources and integrate the agent page
 
 **Files:**
+
 - Modify: `packages/telephony/src/Http/Controllers/AgentController.php`
 - Modify: `resources/js/types/telephony.ts`
 - Modify: `resources/js/pages/agents/index.tsx`
@@ -140,6 +144,7 @@ Expected: PASS with no lint or type errors.
 ### Task 5: Make phone numbers the primary setup path
 
 **Files:**
+
 - Modify: `resources/js/pages/dashboard.tsx`
 - Modify: `resources/js/pages/agents/index.tsx`
 - Modify: `resources/js/pages/phone-numbers/index.tsx`
@@ -172,6 +177,7 @@ Expected: PASS.
 ### Task 6: Documentation, formatting, and full verification
 
 **Files:**
+
 - Modify: `packages/telephony/README.md`
 - Modify: `packages/telephony/tests/TelephonyModelsTest.php`
 - Modify: `packages/telephony/tests/TelephonyEndpointsTest.php`
