@@ -37,6 +37,13 @@ export type TelephonyData = {
     calls: TelephonyCall[];
 };
 
+export type TelephonySetupProgressProps = {
+    phoneNumbersCount: number;
+    agentsCount: number;
+    knowledgeSourcesCount: number;
+    currentTeamSlug: string;
+};
+
 export type KnowledgeAgent = {
     id: number;
     name: string;
