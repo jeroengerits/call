@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid } from 'lucide-react';
+import { Bot, LayoutGrid, Phone } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -19,14 +19,29 @@ import type { NavItem } from '@/types';
 export function AppSidebar() {
     const page = usePage();
     const dashboardUrl = page.props.currentTeam
-        ? dashboard(page.props.currentTeam.slug)
+        ? dashboard(page.props.currentTeam.slug).url
         : '/';
+    const agentsUrl = dashboardUrl.replace(/\/dashboard$/, '/agents');
+    const phoneNumbersUrl = dashboardUrl.replace(
+        /\/dashboard$/,
+        '/phone-numbers',
+    );
 
     const mainNavItems: NavItem[] = [
         {
             title: 'Dashboard',
             href: dashboardUrl,
             icon: LayoutGrid,
+        },
+        {
+            title: 'Agents',
+            href: agentsUrl,
+            icon: Bot,
+        },
+        {
+            title: 'Phone numbers',
+            href: phoneNumbersUrl,
+            icon: Phone,
         },
     ];
 

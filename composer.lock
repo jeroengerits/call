@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "89d3f0cb97078f302b564c84f7bfbe94",
+    "content-hash": "bd723892fc864dd514d7b8e45c1f2ac6",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -270,6 +270,42 @@
                 }
             ],
             "time": "2026-06-14T18:21:03+00:00"
+        },
+        {
+            "name": "call/telephony",
+            "version": "0.1.0",
+            "dist": {
+                "type": "path",
+                "url": "packages/telephony",
+                "reference": "645eab62a0a43982cc988661d2a0e80950b1927d"
+            },
+            "require": {
+                "illuminate/database": "^13.0",
+                "illuminate/support": "^13.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Call\\Telephony\\TelephonyServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Call\\Telephony\\": "src/",
+                    "Call\\Telephony\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Team-owned agents, phone numbers, and call records.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "carbonphp/carbon-doctrine-types",

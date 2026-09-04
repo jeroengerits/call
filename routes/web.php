@@ -3,6 +3,8 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
+use Call\Telephony\Http\Controllers\AgentController;
+use Call\Telephony\Http\Controllers\PhoneNumberController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -11,6 +13,12 @@ Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('agents', [AgentController::class, 'index'])->name('agents.index');
+        Route::post('agents', [AgentController::class, 'store'])->name('agents.store');
+        Route::patch('agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
+        Route::get('phone-numbers', [PhoneNumberController::class, 'index'])->name('phone-numbers.index');
+        Route::post('phone-numbers', [PhoneNumberController::class, 'store'])->name('phone-numbers.store');
+        Route::patch('phone-numbers/{phone_number}', [PhoneNumberController::class, 'update'])->name('phone-numbers.update');
     });
 
 Route::middleware(['auth'])->group(function () {

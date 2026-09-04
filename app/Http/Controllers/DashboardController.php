@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Team;
 use App\Models\TeamInvitation;
+use Call\Telephony\DashboardData;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, DashboardData $dashboardData): Response
     {
+        $team = Team::query()
+            ->where('slug', $request->route('current_team'))
+            ->firstOrFail();
         $email = strtolower($request->user()->email);
 
         $pendingInvitations = TeamInvitation::query()
@@ -33,6 +38,7 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'pendingInvitations' => $pendingInvitations,
+            'telephony' => $dashboardData->forTeam($team),
         ]);
     }
 }

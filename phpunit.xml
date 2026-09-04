@@ -10,6 +10,7 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <directory>packages/telephony/tests</directory>
         </testsuite>
     </testsuites>
     <source>
