@@ -6,7 +6,6 @@ import {
     CardContent,
     CardDescription,
     CardHeader,
-    CardTitle,
 } from '@/components/ui/card';
 import { index as agents } from '@/routes/agents';
 import { index as knowledge } from '@/routes/knowledge';
@@ -69,12 +68,12 @@ export default function TelephonySetupProgress({
                             aria-hidden="true"
                         />
                         <div>
-                            <CardTitle
+                            <h2
                                 id="telephony-setup-complete-title"
-                                className="text-base"
+                                className="text-base leading-none font-semibold"
                             >
                                 Setup complete
-                            </CardTitle>
+                            </h2>
                             <CardDescription className="mt-1">
                                 Your team is ready to handle calls.
                             </CardDescription>
@@ -104,9 +103,12 @@ export default function TelephonySetupProgress({
         <Card role="region" aria-labelledby="telephony-setup-title">
             <CardHeader className="gap-2 pb-4">
                 <div className="flex items-center justify-between gap-4">
-                    <CardTitle id="telephony-setup-title" className="text-base">
+                    <h2
+                        id="telephony-setup-title"
+                        className="text-base leading-none font-semibold"
+                    >
                         Set up your calling workspace
-                    </CardTitle>
+                    </h2>
                     <Badge variant="secondary">
                         {completedCount} of {steps.length} complete
                     </Badge>
