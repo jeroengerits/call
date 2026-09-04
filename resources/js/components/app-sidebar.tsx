@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Bot, LayoutGrid, Phone } from 'lucide-react';
+import { BookOpen, Bot, Clock3, LayoutGrid, Phone } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -14,12 +14,22 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as calls } from '@/routes/calls';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
     const page = usePage();
     const dashboardUrl = page.props.currentTeam
         ? dashboard(page.props.currentTeam.slug).url
+        : '/';
+    const agentsUrl = dashboardUrl.replace(/\/dashboard$/, '/agents');
+    const phoneNumbersUrl = dashboardUrl.replace(
+        /\/dashboard$/,
+        '/phone-numbers',
+    );
+    const knowledgeUrl = dashboardUrl.replace(/\/dashboard$/, '/knowledge');
+    const callHistoryUrl = page.props.currentTeam
+        ? calls(page.props.currentTeam.slug).url
         : '/';
     const agentsUrl = dashboardUrl.replace(/\/dashboard$/, '/agents');
     const phoneNumbersUrl = dashboardUrl.replace(
@@ -34,14 +44,24 @@ export function AppSidebar() {
             icon: LayoutGrid,
         },
         {
+            title: 'Phone numbers',
+            href: phoneNumbersUrl,
+            icon: Phone,
+        },
+        {
             title: 'Agents',
             href: agentsUrl,
             icon: Bot,
         },
         {
-            title: 'Phone numbers',
-            href: phoneNumbersUrl,
-            icon: Phone,
+            title: 'Knowledge',
+            href: knowledgeUrl,
+            icon: BookOpen,
+        },
+        {
+            title: 'Call history',
+            href: callHistoryUrl,
+            icon: Clock3,
         },
     ];
 

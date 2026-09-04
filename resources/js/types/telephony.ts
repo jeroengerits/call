@@ -7,14 +7,16 @@ export type TelephonyAgent = {
     knowledge: string | null;
     isActive: boolean;
     phoneNumbersCount: number;
+    knowledgeSourcesCount: number;
     updateUrl?: string;
+    knowledgeUrl?: string;
 };
 
 export type TelephonyPhoneNumber = {
     id: number;
     number: string;
-    agentId: number;
-    agentName: string;
+    agentId: number | null;
+    agentName: string | null;
     isActive: boolean;
 };
 
@@ -24,8 +26,8 @@ export type TelephonyCall = {
     status: string;
     summary: string | null;
     outcome: string | null;
-    agentName: string;
-    phoneNumber: string;
+    agentName: string | null;
+    phoneNumber: string | null;
     startedAt: string | null;
     endedAt: string | null;
 };
@@ -34,4 +36,12 @@ export type TelephonyData = {
     agents: TelephonyAgent[];
     phoneNumbers: TelephonyPhoneNumber[];
     calls: TelephonyCall[];
+};
+
+export type KnowledgeAgent = {
+    id: number;
+    name: string;
+    sourceCount: number;
+    statuses: Record<'pending' | 'processing' | 'ready' | 'failed', number>;
+    sourcesUrl: string;
 };

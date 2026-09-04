@@ -10,10 +10,13 @@ use App\Http\Requests\Teams\SaveTeamRequest;
 use App\Models\Membership;
 use App\Models\Team;
 use App\Models\User;
+use Call\Telephony\Models\Agent;
+use Call\Telephony\Models\AgentKnowledgeSource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -160,6 +163,16 @@ class TeamController extends Controller
 
             $team->invitations()->delete();
             $team->memberships()->delete();
+            $disk = Storage::disk((string) config('filesystems.knowledge_disk'));
+            $team->agents()->with('knowledgeSources')->get()->each(function (Agent $agent) use ($disk): void {
+                $agent->knowledgeSources->each(function (AgentKnowledgeSource $source) use ($disk): void {
+                    $storagePath = $source->getAttribute('storage_path');
+
+                    if (is_string($storagePath)) {
+                        $disk->delete($storagePath);
+                    }
+                });
+            });
             $team->delete();
         });
 

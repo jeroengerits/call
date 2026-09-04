@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('phone_numbers', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('team_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('agent_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('agent_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('number')->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

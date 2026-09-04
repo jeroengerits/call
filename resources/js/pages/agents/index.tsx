@@ -1,6 +1,7 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
+    BookOpen,
     Bot,
     Check,
     ChevronsUpDown,
@@ -11,6 +12,16 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import { useDeferredValue, useState } from 'react';
 import InputError from '@/components/input-error';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,8 +64,16 @@ import {
 } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import type { TelephonyAgent } from '@/types';
+import { dashboard } from '@/routes';
+import { destroy as destroyAgent } from '@/routes/agents';
+import { index as phoneNumbers } from '@/routes/phone-numbers';
 
-type Props = { agents: TelephonyAgent[]; storeUrl: string };
+type Props = {
+    agents: TelephonyAgent[];
+    storeUrl: string;
+    phoneNumbersCount: number;
+    knowledgeSourcesCount: number;
+};
 type AgentInput = {
     name: string;
     language: string;
@@ -348,8 +367,17 @@ function Field({
     );
 }
 
-export default function AgentsIndex({ agents, storeUrl }: Props) {
+export default function AgentsIndex({
+    agents,
+    storeUrl,
+    phoneNumbersCount,
+}: Props) {
     const [query, setQuery] = useState('');
+    const [agentToDelete, setAgentToDelete] = useState<TelephonyAgent | null>(
+        null,
+    );
+    const { currentTeam } = usePage().props;
+    const teamSlug = currentTeam?.slug ?? '';
     const deferredQuery = useDeferredValue(query.trim().toLowerCase());
     const filteredAgents = agents.filter((agent) =>
         [agent.name, agent.language].some((value) =>
@@ -366,7 +394,7 @@ export default function AgentsIndex({ agents, storeUrl }: Props) {
                     <header className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <Link
-                                href="../dashboard"
+                                href={dashboard(teamSlug).url}
                                 className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-2 text-sm"
                             >
                                 <ArrowLeft className="size-4" /> Back to
@@ -382,8 +410,29 @@ export default function AgentsIndex({ agents, storeUrl }: Props) {
                         </div>
                         <AgentFormDialog storeUrl={storeUrl} />
                     </header>
+                    {phoneNumbersCount === 0 && (
+                        <Card className="border-primary/30">
+                            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <CardTitle className="text-base">
+                                        Start with a phone number
+                                    </CardTitle>
+                                    <CardDescription className="mt-1">
+                                        Connect a number before tuning an agent
+                                        so callers can reach it immediately.
+                                    </CardDescription>
+                                </div>
+                                <Button asChild variant="outline">
+                                    <Link href={phoneNumbers(teamSlug).url}>
+                                        <Phone data-icon="inline-start" />
+                                        Set up phone numbers
+                                    </Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
                     <section
-                        className="grid gap-4 sm:grid-cols-3"
+                        className="grid gap-4 sm:grid-cols-4"
                         aria-label="Agent summary"
                     >
                         <SummaryCard
@@ -404,6 +453,15 @@ export default function AgentsIndex({ agents, storeUrl }: Props) {
                                 0,
                             )}
                             icon={Phone}
+                        />
+                        <SummaryCard
+                            label="Knowledge sources"
+                            value={agents.reduce(
+                                (total, agent) =>
+                                    total + agent.knowledgeSourcesCount,
+                                0,
+                            )}
+                            icon={BookOpen}
                         />
                     </section>
                     <Card>
@@ -493,11 +551,38 @@ export default function AgentsIndex({ agents, storeUrl }: Props) {
                                                 </p>
                                             </div>
                                         </div>
-                                        <AgentFormDialog
-                                            agent={agent}
-                                            action={agent.updateUrl}
-                                            storeUrl={storeUrl}
-                                        />
+                                        <div className="flex gap-2">
+                                            <AgentFormDialog
+                                                agent={agent}
+                                                action={agent.updateUrl}
+                                                storeUrl={storeUrl}
+                                            />
+                                            {agent.knowledgeUrl && (
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    size="sm"
+                                                >
+                                                    <Link
+                                                        href={
+                                                            agent.knowledgeUrl
+                                                        }
+                                                    >
+                                                        Knowledge
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    setAgentToDelete(agent)
+                                                }
+                                            >
+                                                Delete
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -505,6 +590,42 @@ export default function AgentsIndex({ agents, storeUrl }: Props) {
                     </Card>
                 </div>
             </main>
+            <AlertDialog
+                open={agentToDelete !== null}
+                onOpenChange={(open) => !open && setAgentToDelete(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this agent?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This removes the agent, its sources, assigned
+                            numbers, and calls.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (agentToDelete) {
+                                    router.delete(
+                                        destroyAgent([
+                                            teamSlug,
+                                            agentToDelete.id,
+                                        ]).url,
+                                        {
+                                            preserveScroll: true,
+                                            onFinish: () =>
+                                                setAgentToDelete(null),
+                                        },
+                                    );
+                                }
+                            }}
+                        >
+                            Delete agent
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

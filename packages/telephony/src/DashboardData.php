@@ -33,7 +33,7 @@ class DashboardData
                     'id' => $phoneNumber->id,
                     'number' => $phoneNumber->number,
                     'agentId' => $phoneNumber->agent_id,
-                    'agentName' => $phoneNumber->agent->name,
+                    'agentName' => $phoneNumber->agent?->name,
                     'isActive' => $phoneNumber->is_active,
                 ])
                 ->all(),
@@ -48,7 +48,7 @@ class DashboardData
                     'status' => $call->status,
                     'summary' => $call->summary,
                     'outcome' => $call->outcome,
-                    'agentName' => $call->agent->name,
+                    'agentName' => $call->agent?->name,
                     'phoneNumber' => $call->phoneNumber->number,
                     'startedAt' => $call->started_at?->toISOString(),
                     'endedAt' => $call->ended_at?->toISOString(),

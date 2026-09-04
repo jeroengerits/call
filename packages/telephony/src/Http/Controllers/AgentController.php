@@ -3,6 +3,7 @@
 namespace Call\Telephony\Http\Controllers;
 
 use App\Models\Team;
+use Call\Telephony\Http\Requests\DeleteAgentRequest;
 use Call\Telephony\Http\Requests\StoreAgentRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class AgentController extends Controller
 
         return Inertia::render('agents/index', [
             'agents' => $team->agents()
-                ->withCount('phoneNumbers')
+                ->withCount(['phoneNumbers', 'knowledgeSources'])
                 ->latest()
                 ->get()
                 ->map(fn ($agent) => [
@@ -30,6 +31,11 @@ class AgentController extends Controller
                     'knowledge' => $agent->knowledge,
                     'isActive' => $agent->is_active,
                     'phoneNumbersCount' => $agent->phone_numbers_count,
+                    'knowledgeSourcesCount' => $agent->knowledge_sources_count,
+                    'knowledgeUrl' => route('knowledge-sources.index', [
+                        'current_team' => $team->slug,
+                        'agent' => $agent,
+                    ]),
                     'updateUrl' => route('agents.update', [
                         'current_team' => $team->slug,
                         'agent' => $agent,
@@ -37,6 +43,7 @@ class AgentController extends Controller
                 ])
                 ->all(),
             'storeUrl' => route('agents.store', ['current_team' => $team->slug]),
+            'phoneNumbersCount' => $team->phoneNumbers()->count(),
         ]);
     }
 
@@ -59,6 +66,16 @@ class AgentController extends Controller
         $agent->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Agent updated.')]);
+
+        return back();
+    }
+
+    public function destroy(DeleteAgentRequest $request): RedirectResponse
+    {
+        $team = $this->team($request->route('current_team'));
+        $team->agents()->findOrFail($request->route('agent'))->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Agent deleted.')]);
 
         return back();
     }

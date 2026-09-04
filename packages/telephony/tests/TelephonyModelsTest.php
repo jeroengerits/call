@@ -3,12 +3,16 @@
 namespace Call\Telephony\Tests;
 
 use App\Models\Team;
+use Call\Telephony\Enums\KnowledgeSourceStatus;
+use Call\Telephony\Enums\KnowledgeSourceType;
 use Call\Telephony\Models\Agent;
+use Call\Telephony\Models\AgentKnowledgeSource;
 use Call\Telephony\Models\Call as CallModel;
 use Call\Telephony\Models\PhoneNumber;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TelephonyModelsTest extends TestCase
@@ -84,10 +88,51 @@ class TelephonyModelsTest extends TestCase
         $phoneNumber = PhoneNumber::factory()->create();
         $call = CallModel::factory()->create();
 
-        $this->assertSame($phoneNumber->team_id, $phoneNumber->agent->team_id);
+        $this->assertNull($phoneNumber->agent_id);
         $this->assertSame($call->team_id, $call->agent->team_id);
         $this->assertSame($call->team_id, $call->phoneNumber->team_id);
         $this->assertSame($call->agent_id, $call->phoneNumber->agent_id);
+    }
+
+    public function test_agents_have_knowledge_sources_with_enum_casts(): void
+    {
+        $agent = Agent::factory()->create();
+        $source = AgentKnowledgeSource::factory()->for($agent)->create();
+
+        $this->assertTrue($agent->fresh()->knowledgeSources->contains($source));
+        $this->assertTrue($source->fresh()->agent->is($agent));
+        $this->assertSame(KnowledgeSourceType::Text, $source->type);
+        $this->assertSame(KnowledgeSourceStatus::Pending, $source->status);
+    }
+
+    public function test_deleting_an_agent_deletes_its_knowledge_sources(): void
+    {
+        $agent = Agent::factory()->create();
+        $source = AgentKnowledgeSource::factory()->for($agent)->create();
+
+        $agent->delete();
+
+        $this->assertDatabaseMissing('agent_knowledge_sources', ['id' => $source->id]);
+    }
+
+    public function test_deleting_an_agent_cascades_calls_and_phone_numbers_and_files(): void
+    {
+        Storage::fake('knowledge_private');
+        config(['filesystems.knowledge_disk' => 'knowledge_private']);
+        $agent = Agent::factory()->create();
+        $phoneNumber = PhoneNumber::factory()->for($agent->team)->for($agent, 'agent')->create();
+        $call = CallModel::factory()->for($agent->team)->for($agent)->for($phoneNumber)->create();
+        $source = AgentKnowledgeSource::factory()->for($agent)->create([
+            'storage_path' => 'knowledge/'.$agent->id.'/guide.txt',
+        ]);
+        Storage::disk('knowledge_private')->put($source->storage_path, 'guide');
+
+        $agent->delete();
+
+        $this->assertDatabaseMissing('phone_numbers', ['id' => $phoneNumber->id]);
+        $this->assertDatabaseMissing('calls', ['id' => $call->id]);
+        $this->assertDatabaseMissing('agent_knowledge_sources', ['id' => $source->id]);
+        Storage::disk('knowledge_private')->assertMissing($source->storage_path);
     }
 
     public function test_package_migrations_can_be_reversed_and_reapplied(): void
@@ -96,6 +141,8 @@ class TelephonyModelsTest extends TestCase
             require base_path('packages/telephony/database/migrations/2026_09_04_000001_create_agents_table.php'),
             require base_path('packages/telephony/database/migrations/2026_09_04_000002_create_phone_numbers_table.php'),
             require base_path('packages/telephony/database/migrations/2026_09_04_000003_create_calls_table.php'),
+            require base_path('packages/telephony/database/migrations/2026_09_04_000004_create_agent_knowledge_sources_table.php'),
+            require base_path('packages/telephony/database/migrations/2026_09_04_000005_add_processing_at_to_agent_knowledge_sources_table.php'),
         ];
 
         foreach (array_reverse($migrations) as $migration) {
@@ -109,5 +156,6 @@ class TelephonyModelsTest extends TestCase
         $this->assertTrue(Schema::hasTable('agents'));
         $this->assertTrue(Schema::hasTable('phone_numbers'));
         $this->assertTrue(Schema::hasTable('calls'));
+        $this->assertTrue(Schema::hasTable('agent_knowledge_sources'));
     }
 }

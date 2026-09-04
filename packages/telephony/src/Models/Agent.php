@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'team_id',
@@ -24,6 +25,18 @@ class Agent extends Model
 {
     /** @use HasFactory<AgentFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Agent $agent): void {
+            $disk = Storage::disk((string) config('filesystems.knowledge_disk'));
+            $agent->knowledgeSources()->get()->each(function (AgentKnowledgeSource $source) use ($disk): void {
+                if ($source->storage_path !== null) {
+                    $disk->delete($source->storage_path);
+                }
+            });
+        });
+    }
 
     protected static function newFactory(): Factory
     {
@@ -46,6 +59,12 @@ class Agent extends Model
     public function calls(): HasMany
     {
         return $this->hasMany(Call::class);
+    }
+
+    /** @return HasMany<AgentKnowledgeSource, $this> */
+    public function knowledgeSources(): HasMany
+    {
+        return $this->hasMany(AgentKnowledgeSource::class);
     }
 
     /** @return array<string, string> */
