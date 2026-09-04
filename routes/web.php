@@ -16,6 +16,7 @@ Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('calls', CallHistoryController::class)->name('calls.index');
         Route::get('call-history', CallHistoryController::class)->name('call-history.index');
         Route::get('knowledge', KnowledgeController::class)->name('knowledge.index');
         Route::get('agents', [AgentController::class, 'index'])->name('agents.index');

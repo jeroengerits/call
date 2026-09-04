@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowRight, Clock3, Phone } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock3, Phone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,11 +26,27 @@ import {
 } from '@/components/ui/table';
 import type { TelephonyCall } from '@/types';
 import { index as phoneNumbers } from '@/routes/phone-numbers';
+import { index as calls } from '@/routes/calls';
 
-type Props = { calls: TelephonyCall[]; limit: number };
+type Props = {
+    calls: {
+        data: TelephonyCall[];
+        current_page: number;
+        last_page: number;
+        total: number;
+    };
+    limit: number;
+    summary: { total: number; completed: number };
+};
 
-export default function CallHistoryIndex({ calls, limit }: Props) {
+export default function CallHistoryIndex({
+    calls: paginatedCalls,
+    limit,
+    summary,
+}: Props) {
     const { currentTeam } = usePage().props;
+    const callsUrl = currentTeam ? calls(currentTeam.slug).url : '/';
+    const callsOnPage = paginatedCalls.data;
     return (
         <>
             <Head title="Call history" />
@@ -40,7 +56,7 @@ export default function CallHistoryIndex({ calls, limit }: Props) {
                         <h1 className="text-3xl font-semibold tracking-tight">
                             Call history
                         </h1>
-                        <p className="text-muted-foreground mt-2">
+                        <p className="text-muted-foreground mt-2 text-pretty">
                             Review the latest conversations handled by your
                             team&apos;s agents.
                         </p>
@@ -55,16 +71,30 @@ export default function CallHistoryIndex({ calls, limit }: Props) {
                                     />
                                     Recent calls
                                 </CardTitle>
-                                <CardDescription>
-                                    Showing up to the latest {limit} calls.
+                                <CardDescription className="text-pretty">
+                                    Showing {callsOnPage.length} of{' '}
+                                    {summary.total} calls, limited to {limit}{' '}
+                                    per page.
                                 </CardDescription>
                             </div>
-                            <Badge variant="outline">
-                                {calls.length} recorded
-                            </Badge>
+                            <div className="flex flex-wrap gap-2">
+                                <Badge
+                                    variant="outline"
+                                    className="tabular-nums"
+                                >
+                                    {summary.total} total
+                                </Badge>
+                                <Badge
+                                    variant="secondary"
+                                    className="tabular-nums"
+                                >
+                                    <CheckCircle2 data-icon="inline-start" />
+                                    {summary.completed} completed
+                                </Badge>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
-                            {calls.length === 0 ? (
+                            {callsOnPage.length === 0 ? (
                                 <Empty className="min-h-72 border-0">
                                     <EmptyHeader>
                                         <EmptyMedia variant="icon">
@@ -106,16 +136,18 @@ export default function CallHistoryIndex({ calls, limit }: Props) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {calls.map((call) => (
+                                            {callsOnPage.map((call) => (
                                                 <TableRow key={call.id}>
                                                     <TableCell className="font-medium whitespace-nowrap">
                                                         {call.callerNumber}
                                                     </TableCell>
                                                     <TableCell>
-                                                        {call.agentName}
+                                                        {call.agentName ??
+                                                            'Unassigned'}
                                                     </TableCell>
                                                     <TableCell className="whitespace-nowrap">
-                                                        {call.phoneNumber}
+                                                        {call.phoneNumber ??
+                                                            'Unknown number'}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge
@@ -126,7 +158,10 @@ export default function CallHistoryIndex({ calls, limit }: Props) {
                                                                     : 'secondary'
                                                             }
                                                         >
-                                                            {call.status}
+                                                            {call.status.replaceAll(
+                                                                '_',
+                                                                ' ',
+                                                            )}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-muted-foreground whitespace-nowrap">
@@ -145,6 +180,48 @@ export default function CallHistoryIndex({ calls, limit }: Props) {
                                             ))}
                                         </TableBody>
                                     </Table>
+                                </div>
+                            )}
+                            {paginatedCalls.last_page > 1 && (
+                                <div className="flex items-center justify-between border-t px-6 py-4 text-sm">
+                                    <span className="text-muted-foreground tabular-nums">
+                                        Page {paginatedCalls.current_page} of{' '}
+                                        {paginatedCalls.last_page}
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                paginatedCalls.current_page ===
+                                                1
+                                            }
+                                        >
+                                            <Link
+                                                href={`${callsUrl}?page=${paginatedCalls.current_page - 1}&limit=${limit}`}
+                                                preserveScroll
+                                            >
+                                                Previous
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                paginatedCalls.current_page ===
+                                                paginatedCalls.last_page
+                                            }
+                                        >
+                                            <Link
+                                                href={`${callsUrl}?page=${paginatedCalls.current_page + 1}&limit=${limit}`}
+                                                preserveScroll
+                                            >
+                                                Next
+                                            </Link>
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </CardContent>

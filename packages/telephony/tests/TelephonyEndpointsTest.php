@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TelephonyEndpointsTest extends TestCase
@@ -34,7 +35,7 @@ class TelephonyEndpointsTest extends TestCase
             ->assertOk();
     }
 
-    public function test_team_call_history_is_bounded_and_serialized(): void
+    public function test_team_calls_are_scoped_and_paginated(): void
     {
         $user = User::factory()->create();
         $team = $user->currentTeam;
@@ -44,18 +45,38 @@ class TelephonyEndpointsTest extends TestCase
             'number' => '+15550101234',
             'is_active' => true,
         ]);
-        $call = $team->calls()->create([
-            'agent_id' => $agent->id,
-            'phone_number_id' => $phoneNumber->id,
-            'twilio_call_sid' => 'CA-test-call',
-            'caller_number' => '+15550105678',
-            'status' => 'completed',
-            'started_at' => now(),
-        ]);
+        CallModel::factory()->for($team)->for($agent)->for($phoneNumber)->count(3)->create();
+        $otherTeam = Team::factory()->create();
+        CallModel::factory()->for($otherTeam)->count(2)->create();
 
         $this->actingAs($user)
-            ->get(route('call-history.index', $team))
-            ->assertOk();
+            ->get(route('calls.index', ['current_team' => $team, 'limit' => 2]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('call-history/index')
+                ->has('calls.data', 2)
+                ->where('calls.total', 3)
+                ->where('calls.per_page', 2)
+                ->where('summary.total', 3)
+                ->where('summary.completed', 3),
+            );
+
+        $this->actingAs($user)
+            ->get(route('calls.index', ['current_team' => $team, 'limit' => 1000]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('calls.per_page', 100)
+                ->has('calls.data', 3),
+            );
+    }
+
+    public function test_call_history_route_remains_available_as_a_compatibility_alias(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('call-history.index', $user->currentTeam))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('call-history/index'));
     }
 
     public function test_team_knowledge_overview_serializes_source_statuses(): void

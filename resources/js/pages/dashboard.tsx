@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowRight, BookOpen, Bot, Phone } from 'lucide-react';
+import { ArrowRight, BookOpen, Bot, Clock3, Phone } from 'lucide-react';
 import { useState } from 'react';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { dashboard } from '@/routes';
 import { index as agents } from '@/routes/agents';
 import { index as knowledge } from '@/routes/knowledge';
 import { index as phoneNumbers } from '@/routes/phone-numbers';
+import { index as calls } from '@/routes/calls';
 import type { DashboardInvitation, TelephonyData } from '@/types';
 
 type Props = {
@@ -84,7 +85,7 @@ export default function Dashboard({
                         </Card>
                     )}
                     <section
-                        className="grid gap-4 md:grid-cols-3"
+                        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
                         aria-label="Setup shortcuts"
                     >
                         <SetupCard
@@ -107,6 +108,13 @@ export default function Dashboard({
                             description="Connect sources to your agents"
                             href={knowledge(teamSlug).url}
                             action="Manage knowledge"
+                        />
+                        <SetupCard
+                            icon={Clock3}
+                            title="Call history"
+                            description={`${telephony.calls.length} recent calls`}
+                            href={calls(teamSlug).url}
+                            action="Review calls"
                         />
                     </section>
                 </div>

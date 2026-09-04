@@ -26,8 +26,8 @@ export type TelephonyCall = {
     status: string;
     summary: string | null;
     outcome: string | null;
-    agentName: string;
-    phoneNumber: string;
+    agentName: string | null;
+    phoneNumber: string | null;
     startedAt: string | null;
     endedAt: string | null;
 };

@@ -14,6 +14,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as calls } from '@/routes/calls';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
@@ -27,10 +28,9 @@ export function AppSidebar() {
         '/phone-numbers',
     );
     const knowledgeUrl = dashboardUrl.replace(/\/dashboard$/, '/knowledge');
-    const callHistoryUrl = dashboardUrl.replace(
-        /\/dashboard$/,
-        '/call-history',
-    );
+    const callHistoryUrl = page.props.currentTeam
+        ? calls(page.props.currentTeam.slug).url
+        : '/';
 
     const mainNavItems: NavItem[] = [
         {
