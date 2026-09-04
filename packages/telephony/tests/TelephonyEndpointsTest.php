@@ -103,6 +103,32 @@ class TelephonyEndpointsTest extends TestCase
             ->assertOk();
     }
 
+    public function test_setup_pages_return_team_scoped_setup_counts(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+        $team->phoneNumbers()->create(['number' => '+15550101234']);
+        AgentKnowledgeSource::factory()->for($agent)->count(2)->create();
+
+        $this->actingAs($user)
+            ->get(route('phone-numbers.index', $team))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('agentsCount', 1)
+                ->where('knowledgeSourcesCount', 2));
+
+        $this->actingAs($user)
+            ->get(route('agents.index', $team))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('phoneNumbersCount', 1)
+                ->where('knowledgeSourcesCount', 2));
+
+        $this->actingAs($user)
+            ->get(route('knowledge.index', $team))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('phoneNumbersCount', 1));
+    }
+
     public function test_a_team_member_can_create_an_agent(): void
     {
         $user = User::factory()->create();

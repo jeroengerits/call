@@ -16,12 +16,13 @@ class AgentController extends Controller
     public function index(Request $request): Response
     {
         $team = $this->team($request->route('current_team'));
+        $agents = $team->agents()
+            ->withCount(['phoneNumbers', 'knowledgeSources'])
+            ->latest()
+            ->get();
 
         return Inertia::render('agents/index', [
-            'agents' => $team->agents()
-                ->withCount(['phoneNumbers', 'knowledgeSources'])
-                ->latest()
-                ->get()
+            'agents' => $agents
                 ->map(fn ($agent) => [
                     'id' => $agent->id,
                     'name' => $agent->name,
@@ -43,6 +44,7 @@ class AgentController extends Controller
                 ->all(),
             'storeUrl' => route('agents.store', ['current_team' => $team->slug]),
             'phoneNumbersCount' => $team->phoneNumbers()->count(),
+            'knowledgeSourcesCount' => $agents->sum('knowledge_sources_count'),
         ]);
     }
 

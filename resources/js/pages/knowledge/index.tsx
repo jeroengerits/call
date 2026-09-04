@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     BookOpen,
@@ -7,6 +7,7 @@ import {
     Clock3,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import TelephonySetupProgress from '@/components/telephony-setup-progress';
 import {
     Card,
     CardContent,
@@ -22,10 +23,17 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import type { KnowledgeAgent } from '@/types';
+import { index as agentsRoute } from '@/routes/agents';
 
-type Props = { agents: KnowledgeAgent[] };
+type Props = { agents: KnowledgeAgent[]; phoneNumbersCount: number };
 
-export default function KnowledgeIndex({ agents }: Props) {
+export default function KnowledgeIndex({ agents, phoneNumbersCount }: Props) {
+    const { currentTeam } = usePage().props;
+    const teamSlug = currentTeam?.slug ?? '';
+    const knowledgeSourcesCount = agents.reduce(
+        (total, agent) => total + agent.sourceCount,
+        0,
+    );
     return (
         <>
             <Head title="Knowledge" />
@@ -40,6 +48,12 @@ export default function KnowledgeIndex({ agents }: Props) {
                             processing needs attention.
                         </p>
                     </header>
+                    <TelephonySetupProgress
+                        phoneNumbersCount={phoneNumbersCount}
+                        agentsCount={agents.length}
+                        knowledgeSourcesCount={knowledgeSourcesCount}
+                        currentTeamSlug={teamSlug}
+                    />
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -69,6 +83,16 @@ export default function KnowledgeIndex({ agents }: Props) {
                                             connect knowledge sources to it.
                                         </EmptyDescription>
                                     </EmptyHeader>
+                                    <Link
+                                        href={agentsRoute(teamSlug).url}
+                                        className="text-primary inline-flex items-center gap-2 text-sm font-medium"
+                                    >
+                                        Create an agent first
+                                        <ArrowRight
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </Link>
                                 </Empty>
                             ) : (
                                 agents.map((agent) => (

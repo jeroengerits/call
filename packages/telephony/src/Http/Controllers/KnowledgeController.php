@@ -14,13 +14,14 @@ class KnowledgeController extends Controller
     public function __invoke(Request $request): Response
     {
         $team = $this->team($request->route('current_team'));
+        $agents = $team->agents()
+            ->withCount('knowledgeSources')
+            ->with(['knowledgeSources:id,agent_id,status'])
+            ->latest()
+            ->get();
 
         return Inertia::render('knowledge/index', [
-            'agents' => $team->agents()
-                ->withCount('knowledgeSources')
-                ->with(['knowledgeSources:id,agent_id,status'])
-                ->latest()
-                ->get()
+            'agents' => $agents
                 ->map(fn ($agent) => [
                     'id' => $agent->id,
                     'name' => $agent->name,
@@ -38,6 +39,7 @@ class KnowledgeController extends Controller
                     ]),
                 ])
                 ->all(),
+            'phoneNumbersCount' => $team->phoneNumbers()->count(),
         ]);
     }
 

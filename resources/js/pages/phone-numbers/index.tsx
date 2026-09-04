@@ -3,6 +3,7 @@ import { ArrowLeft, Phone, Search, Users } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useDeferredValue, useState } from 'react';
 import InputError from '@/components/input-error';
+import TelephonySetupProgress from '@/components/telephony-setup-progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,6 +56,8 @@ type PhoneNumber = TelephonyPhoneNumber & { updateUrl?: string };
 type Props = {
     phoneNumbers: PhoneNumber[];
     agents: Pick<TelephonyAgent, 'id' | 'name'>[];
+    agentsCount: number;
+    knowledgeSourcesCount: number;
     storeUrl: string;
 };
 type NumberInput = { agent_id: string; number: string };
@@ -196,6 +199,8 @@ function Field({
 export default function PhoneNumbersIndex({
     phoneNumbers,
     agents,
+    agentsCount,
+    knowledgeSourcesCount,
     storeUrl,
 }: Props) {
     const [query, setQuery] = useState('');
@@ -236,8 +241,16 @@ export default function PhoneNumbersIndex({
                                 agent.
                             </p>
                         </div>
-                        <NumberDialog agents={agents} storeUrl={storeUrl} />
+                        {phoneNumbers.length > 0 && (
+                            <NumberDialog agents={agents} storeUrl={storeUrl} />
+                        )}
                     </header>
+                    <TelephonySetupProgress
+                        phoneNumbersCount={phoneNumbers.length}
+                        agentsCount={agentsCount}
+                        knowledgeSourcesCount={knowledgeSourcesCount}
+                        currentTeamSlug={teamSlug}
+                    />
                     <section
                         className="grid gap-4 sm:grid-cols-3"
                         aria-label="Phone number summary"
@@ -307,7 +320,9 @@ export default function PhoneNumbersIndex({
                                         </EmptyTitle>
                                         <EmptyDescription>
                                             {phoneNumbers.length === 0
-                                                ? 'Add a Twilio number manually to make an agent reachable.'
+                                                ? agentsCount > 0
+                                                    ? 'Add a number to make your agent reachable. You can assign it after setup.'
+                                                    : 'Add a number to make your calling workspace reachable, then create an agent.'
                                                 : 'Try a different number, agent, or Twilio SID.'}
                                         </EmptyDescription>
                                     </EmptyHeader>

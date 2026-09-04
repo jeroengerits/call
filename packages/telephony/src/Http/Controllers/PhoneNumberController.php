@@ -16,6 +16,11 @@ class PhoneNumberController extends Controller
     public function index(Request $request): Response
     {
         $team = $this->team($request->route('current_team'));
+        $agents = $team->agents()->select(['id', 'name'])->latest()->get();
+        $knowledgeSourcesCount = $team->agents()
+            ->withCount('knowledgeSources')
+            ->get()
+            ->sum('knowledge_sources_count');
 
         return Inertia::render('phone-numbers/index', [
             'phoneNumbers' => $team->phoneNumbers()
@@ -34,7 +39,9 @@ class PhoneNumberController extends Controller
                     ]),
                 ])
                 ->all(),
-            'agents' => $team->agents()->select(['id', 'name'])->latest()->get(),
+            'agents' => $agents,
+            'agentsCount' => $agents->count(),
+            'knowledgeSourcesCount' => $knowledgeSourcesCount,
             'storeUrl' => route('phone-numbers.store', ['current_team' => $team->slug]),
         ]);
     }

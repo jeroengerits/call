@@ -12,6 +12,7 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import { useDeferredValue, useState } from 'react';
 import InputError from '@/components/input-error';
+import TelephonySetupProgress from '@/components/telephony-setup-progress';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -354,6 +355,7 @@ export default function AgentsIndex({
     agents,
     storeUrl,
     phoneNumbersCount,
+    knowledgeSourcesCount,
 }: Props) {
     const [query, setQuery] = useState('');
     const [agentToDelete, setAgentToDelete] = useState<TelephonyAgent | null>(
@@ -391,29 +393,16 @@ export default function AgentsIndex({
                                 on calls.
                             </p>
                         </div>
-                        <AgentFormDialog storeUrl={storeUrl} />
+                        {(agents.length > 0 || phoneNumbersCount > 0) && (
+                            <AgentFormDialog storeUrl={storeUrl} />
+                        )}
                     </header>
-                    {phoneNumbersCount === 0 && (
-                        <Card className="border-primary/30">
-                            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <CardTitle className="text-base">
-                                        Start with a phone number
-                                    </CardTitle>
-                                    <CardDescription className="mt-1">
-                                        Connect a number before tuning an agent
-                                        so callers can reach it immediately.
-                                    </CardDescription>
-                                </div>
-                                <Button asChild variant="outline">
-                                    <Link href={phoneNumbers(teamSlug).url}>
-                                        <Phone data-icon="inline-start" />
-                                        Set up phone numbers
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
+                    <TelephonySetupProgress
+                        phoneNumbersCount={phoneNumbersCount}
+                        agentsCount={agents.length}
+                        knowledgeSourcesCount={knowledgeSourcesCount}
+                        currentTeamSlug={teamSlug}
+                    />
                     <section
                         className="grid gap-4 sm:grid-cols-4"
                         aria-label="Agent summary"
@@ -488,13 +477,30 @@ export default function AgentsIndex({
                                         </EmptyTitle>
                                         <EmptyDescription>
                                             {agents.length === 0
-                                                ? 'Create your first agent to give callers a clear, consistent experience.'
+                                                ? phoneNumbersCount > 0
+                                                    ? 'Create an agent to give callers a clear, consistent experience.'
+                                                    : 'Add a phone number first so callers can reach the agent you create.'
                                                 : 'Try a different name or language.'}
                                         </EmptyDescription>
                                     </EmptyHeader>
-                                    {agents.length === 0 && (
-                                        <AgentFormDialog storeUrl={storeUrl} />
-                                    )}
+                                    {agents.length === 0 &&
+                                        (phoneNumbersCount > 0 ? (
+                                            <AgentFormDialog
+                                                storeUrl={storeUrl}
+                                            />
+                                        ) : (
+                                            <Button asChild>
+                                                <Link
+                                                    href={
+                                                        phoneNumbers(teamSlug)
+                                                            .url
+                                                    }
+                                                >
+                                                    <Phone data-icon="inline-start" />
+                                                    Add a phone number first
+                                                </Link>
+                                            </Button>
+                                        ))}
                                 </Empty>
                             ) : (
                                 filteredAgents.map((agent) => (
