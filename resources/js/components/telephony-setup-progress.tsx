@@ -58,7 +58,10 @@ export default function TelephonySetupProgress({
 
     if (completedCount === steps.length) {
         return (
-            <Card>
+            <Card
+                role="region"
+                aria-labelledby="telephony-setup-complete-title"
+            >
                 <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                         <CheckCircle2
@@ -66,7 +69,10 @@ export default function TelephonySetupProgress({
                             aria-hidden="true"
                         />
                         <div>
-                            <CardTitle className="text-base">
+                            <CardTitle
+                                id="telephony-setup-complete-title"
+                                className="text-base"
+                            >
                                 Setup complete
                             </CardTitle>
                             <CardDescription className="mt-1">
@@ -95,7 +101,7 @@ export default function TelephonySetupProgress({
     }
 
     return (
-        <Card aria-labelledby="telephony-setup-title">
+        <Card role="region" aria-labelledby="telephony-setup-title">
             <CardHeader className="gap-2 pb-4">
                 <div className="flex items-center justify-between gap-4">
                     <CardTitle id="telephony-setup-title" className="text-base">
