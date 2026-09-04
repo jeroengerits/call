@@ -32,14 +32,8 @@ import {
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type Source = {
     id: number;
@@ -116,38 +110,92 @@ function SourceForm({
 
     return (
         <form onSubmit={submit} className="grid gap-5">
-            <div className="grid gap-2">
-                <Label htmlFor="source-type">Source type</Label>
-                <Select
-                    value={form.data.type}
-                    onValueChange={(value: Source['type']) =>
-                        form.setData('type', value)
-                    }
-                >
-                    <SelectTrigger
-                        id="source-type"
-                        aria-describedby="source-type-description"
-                    >
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {(Object.keys(labels) as Source['type'][]).map(
-                            (type) => (
-                                <SelectItem key={type} value={type}>
-                                    {labels[type]}
-                                </SelectItem>
-                            ),
-                        )}
-                    </SelectContent>
-                </Select>
-                <p
-                    id="source-type-description"
-                    className="text-muted-foreground text-xs"
-                >
+            <Tabs
+                value={form.data.type}
+                onValueChange={(value) =>
+                    form.setData('type', value as Source['type'])
+                }
+            >
+                <TabsList className="grid w-full grid-cols-3">
+                    {(Object.keys(labels) as Source['type'][]).map((type) => (
+                        <TabsTrigger key={type} value={type}>
+                            {labels[type]}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+                <p className="text-muted-foreground mt-2 text-xs">
                     Choose how this source should be added to the agent.
                 </p>
                 <InputError id="source-type-error" message={form.errors.type} />
-            </div>
+                <TabsContent value="url" className="mt-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="source-url">URL</Label>
+                        <Input
+                            id="source-url"
+                            type="url"
+                            placeholder="https://example.com/help"
+                            value={form.data.url}
+                            onChange={(event) =>
+                                form.setData('url', event.target.value)
+                            }
+                            aria-invalid={Boolean(form.errors.url)}
+                            required
+                        />
+                        <InputError
+                            id="source-url-error"
+                            message={form.errors.url}
+                        />
+                    </div>
+                </TabsContent>
+                <TabsContent value="text" className="mt-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="source-content">Text content</Label>
+                        <Textarea
+                            id="source-content"
+                            className="min-h-36"
+                            value={form.data.content}
+                            onChange={(event) =>
+                                form.setData('content', event.target.value)
+                            }
+                            aria-invalid={Boolean(form.errors.content)}
+                            required
+                        />
+                        <InputError
+                            id="source-content-error"
+                            message={form.errors.content}
+                        />
+                    </div>
+                </TabsContent>
+                <TabsContent value="attachment" className="mt-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="source-attachment">Attachment</Label>
+                        <Input
+                            id="source-attachment"
+                            type="file"
+                            accept=".txt,.md,.pdf,.csv,.json"
+                            onChange={(event) =>
+                                form.setData(
+                                    'attachment',
+                                    event.target.files?.[0] ?? null,
+                                )
+                            }
+                            aria-invalid={Boolean(form.errors.attachment)}
+                            aria-describedby="source-attachment-help source-attachment-error"
+                            required
+                        />
+                        <p
+                            id="source-attachment-help"
+                            className="text-muted-foreground text-xs"
+                        >
+                            TXT, MD, PDF, CSV, or JSON up to 10 MB.
+                        </p>
+                        <InputError
+                            id="source-attachment-error"
+                            message={form.errors.attachment}
+                        />
+                    </div>
+                </TabsContent>
+            </Tabs>
             <div className="grid gap-2">
                 <Label htmlFor="source-title">Title</Label>
                 <Input
@@ -167,82 +215,6 @@ function SourceForm({
                     message={form.errors.title}
                 />
             </div>
-            {form.data.type === 'url' && (
-                <div className="grid gap-2">
-                    <Label htmlFor="source-url">URL</Label>
-                    <Input
-                        id="source-url"
-                        type="url"
-                        placeholder="https://example.com/help"
-                        value={form.data.url}
-                        onChange={(event) =>
-                            form.setData('url', event.target.value)
-                        }
-                        aria-invalid={Boolean(form.errors.url)}
-                        aria-describedby={
-                            form.errors.url ? 'source-url-error' : undefined
-                        }
-                        required
-                    />
-                    <InputError
-                        id="source-url-error"
-                        message={form.errors.url}
-                    />
-                </div>
-            )}
-            {form.data.type === 'text' && (
-                <div className="grid gap-2">
-                    <Label htmlFor="source-content">Text content</Label>
-                    <Textarea
-                        id="source-content"
-                        className="min-h-36"
-                        value={form.data.content}
-                        onChange={(event) =>
-                            form.setData('content', event.target.value)
-                        }
-                        aria-invalid={Boolean(form.errors.content)}
-                        aria-describedby={
-                            form.errors.content
-                                ? 'source-content-error'
-                                : undefined
-                        }
-                        required
-                    />
-                    <InputError
-                        id="source-content-error"
-                        message={form.errors.content}
-                    />
-                </div>
-            )}
-            {form.data.type === 'attachment' && (
-                <div className="grid gap-2">
-                    <Label htmlFor="source-attachment">Attachment</Label>
-                    <Input
-                        id="source-attachment"
-                        type="file"
-                        accept=".txt,.md,.pdf,.csv,.json"
-                        onChange={(event) =>
-                            form.setData(
-                                'attachment',
-                                event.target.files?.[0] ?? null,
-                            )
-                        }
-                        aria-invalid={Boolean(form.errors.attachment)}
-                        aria-describedby="source-attachment-help source-attachment-error"
-                        required
-                    />
-                    <p
-                        id="source-attachment-help"
-                        className="text-muted-foreground text-xs"
-                    >
-                        TXT, MD, PDF, CSV, or JSON up to 10 MB.
-                    </p>
-                    <InputError
-                        id="source-attachment-error"
-                        message={form.errors.attachment}
-                    />
-                </div>
-            )}
             <Button type="submit" disabled={form.processing}>
                 {form.processing ? 'Adding source...' : 'Add source'}
             </Button>

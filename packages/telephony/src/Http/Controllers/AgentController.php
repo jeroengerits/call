@@ -18,7 +18,7 @@ class AgentController extends Controller
 
         return Inertia::render('agents/index', [
             'agents' => $team->agents()
-                ->withCount('phoneNumbers')
+                ->withCount(['phoneNumbers', 'knowledgeSources'])
                 ->latest()
                 ->get()
                 ->map(fn ($agent) => [
@@ -30,6 +30,7 @@ class AgentController extends Controller
                     'knowledge' => $agent->knowledge,
                     'isActive' => $agent->is_active,
                     'phoneNumbersCount' => $agent->phone_numbers_count,
+                    'knowledgeSourcesCount' => $agent->knowledge_sources_count,
                     'knowledgeUrl' => route('knowledge-sources.index', [
                         'current_team' => $team->slug,
                         'agent' => $agent,

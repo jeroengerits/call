@@ -48,7 +48,7 @@ class ProcessAgentKnowledgeSource implements ShouldQueue
         } catch (Throwable $exception) {
             $source->update([
                 'status' => KnowledgeSourceStatus::Failed,
-                'error_message' => $exception->getMessage(),
+                'error_message' => $this->safeErrorMessage($exception),
                 'processing_at' => null,
             ]);
         }
@@ -61,7 +61,7 @@ class ProcessAgentKnowledgeSource implements ShouldQueue
         if ($source !== null) {
             $source->update([
                 'status' => KnowledgeSourceStatus::Failed,
-                'error_message' => $exception?->getMessage() ?? 'Knowledge source processing failed.',
+                'error_message' => 'Knowledge source processing failed.',
                 'processing_at' => null,
             ]);
         }
@@ -72,5 +72,26 @@ class ProcessAgentKnowledgeSource implements ShouldQueue
         return $source->status === KnowledgeSourceStatus::Pending
             || ($source->status === KnowledgeSourceStatus::Processing
                 && $source->processing_at?->lt(now()->subMinutes(10)));
+    }
+
+    private function safeErrorMessage(Throwable $exception): string
+    {
+        $message = $exception->getMessage();
+        $safeMessages = [
+            'Text knowledge source has no content.',
+            'URL knowledge source has no URL.',
+            'The URL host could not be resolved.',
+            'The URL host must resolve to a public address.',
+            'Attachment has no storage path.',
+            'Attachment is unavailable in storage.',
+            'Attachment format is not supported for text extraction.',
+            'PDF extraction is unavailable because no PDF parser is installed.',
+        ];
+
+        if (in_array($message, $safeMessages, true) || preg_match('/^URL fetch failed with HTTP status \d+\.$/', $message) === 1) {
+            return $message;
+        }
+
+        return 'Knowledge source processing failed.';
     }
 }

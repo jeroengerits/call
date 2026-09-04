@@ -42,6 +42,29 @@ class UrlSafety
         }
     }
 
+    public function safeAddress(string $url): string
+    {
+        $parts = parse_url($url);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = $parts['host'] ?? null;
+
+        if (! in_array($scheme, ['http', 'https'], true) || ! is_string($host)) {
+            throw new RuntimeException('The URL must use the HTTP or HTTPS scheme.');
+        }
+
+        $addresses = filter_var($host, FILTER_VALIDATE_IP)
+            ? [$host]
+            : $this->resolveHost($host);
+
+        foreach ($addresses as $address) {
+            if (! $this->isBlockedAddress($address)) {
+                return $address;
+            }
+        }
+
+        throw new RuntimeException('The URL host must resolve to a public address.');
+    }
+
     /** @return array<int, string> */
     private function resolveHost(string $host): array
     {

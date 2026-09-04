@@ -121,6 +121,7 @@ class TelephonyModelsTest extends TestCase
             require base_path('packages/telephony/database/migrations/2026_09_04_000002_create_phone_numbers_table.php'),
             require base_path('packages/telephony/database/migrations/2026_09_04_000003_create_calls_table.php'),
             require base_path('packages/telephony/database/migrations/2026_09_04_000004_create_agent_knowledge_sources_table.php'),
+            require base_path('packages/telephony/database/migrations/2026_09_04_000005_add_processing_at_to_agent_knowledge_sources_table.php'),
         ];
 
         foreach (array_reverse($migrations) as $migration) {

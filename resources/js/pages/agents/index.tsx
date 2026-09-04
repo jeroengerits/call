@@ -1,6 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
+    BookOpen,
     Bot,
     Check,
     ChevronsUpDown,
@@ -58,6 +59,7 @@ type Props = {
     agents: TelephonyAgent[];
     storeUrl: string;
     phoneNumbersCount: number;
+    knowledgeSourcesCount: number;
 };
 type AgentInput = {
     name: string;
@@ -412,7 +414,7 @@ export default function AgentsIndex({
                         </Card>
                     )}
                     <section
-                        className="grid gap-4 sm:grid-cols-3"
+                        className="grid gap-4 sm:grid-cols-4"
                         aria-label="Agent summary"
                     >
                         <SummaryCard
@@ -433,6 +435,15 @@ export default function AgentsIndex({
                                 0,
                             )}
                             icon={Phone}
+                        />
+                        <SummaryCard
+                            label="Knowledge sources"
+                            value={agents.reduce(
+                                (total, agent) =>
+                                    total + agent.knowledgeSourcesCount,
+                                0,
+                            )}
+                            icon={BookOpen}
                         />
                     </section>
                     <Card>

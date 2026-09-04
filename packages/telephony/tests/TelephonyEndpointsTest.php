@@ -232,8 +232,8 @@ class TelephonyEndpointsTest extends TestCase
     public function test_attachment_knowledge_sources_are_stored_on_the_private_disk(): void
     {
         Queue::fake();
-        config(['filesystems.default' => 'testing']);
-        Storage::fake('testing');
+        config(['filesystems.default' => 'public']);
+        Storage::fake('knowledge_private');
         $user = User::factory()->create();
         $team = $user->currentTeam;
         $agent = Agent::factory()->for($team)->create();
@@ -248,7 +248,7 @@ class TelephonyEndpointsTest extends TestCase
             ->assertRedirect();
 
         $source = AgentKnowledgeSource::query()->firstOrFail();
-        Storage::disk('testing')->assertExists($source->storage_path);
+        Storage::disk('knowledge_private')->assertExists($source->storage_path);
         $this->assertSame('guide.md', $source->original_filename);
         $this->assertSame(10 * 1024, $source->file_size);
     }
@@ -298,12 +298,12 @@ class TelephonyEndpointsTest extends TestCase
 
     public function test_destroying_a_knowledge_source_removes_its_private_file(): void
     {
-        config(['filesystems.default' => 'testing']);
-        Storage::fake('testing');
+        config(['filesystems.default' => 'public']);
+        Storage::fake('knowledge_private');
         $user = User::factory()->create();
         $team = $user->currentTeam;
         $agent = Agent::factory()->for($team)->create();
-        Storage::disk('testing')->put('knowledge/'.$agent->id.'/guide.md', '# Guide');
+        Storage::disk('knowledge_private')->put('knowledge/'.$agent->id.'/guide.md', '# Guide');
         $source = AgentKnowledgeSource::factory()->for($agent)->create([
             'type' => KnowledgeSourceType::Attachment,
             'storage_path' => 'knowledge/'.$agent->id.'/guide.md',
@@ -314,7 +314,7 @@ class TelephonyEndpointsTest extends TestCase
             ->delete(route('knowledge-sources.destroy', [$team, $agent, $source]))
             ->assertRedirect();
 
-        Storage::disk('testing')->assertMissing($source->storage_path);
+        Storage::disk('knowledge_private')->assertMissing($source->storage_path);
         $this->assertDatabaseMissing('agent_knowledge_sources', ['id' => $source->id]);
     }
 

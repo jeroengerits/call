@@ -58,7 +58,8 @@ class AgentKnowledgeSourceController extends Controller
         $storagePath = null;
 
         try {
-            $storagePath = $attachment?->store("knowledge/{$agent->id}", (string) config('filesystems.default'));
+            $diskName = (string) config('filesystems.knowledge_disk');
+            $storagePath = $attachment?->store("knowledge/{$agent->id}", $diskName);
 
             $source = $agent->knowledgeSources()->create([
                 'type' => $validated['type'],
@@ -74,7 +75,7 @@ class AgentKnowledgeSourceController extends Controller
             ]);
         } catch (Throwable $exception) {
             if ($storagePath !== null) {
-                Storage::disk((string) config('filesystems.default'))->delete($storagePath);
+                Storage::disk((string) config('filesystems.knowledge_disk'))->delete($storagePath);
             }
 
             throw $exception;
@@ -112,7 +113,7 @@ class AgentKnowledgeSourceController extends Controller
         $source = $agent->knowledgeSources()->findOrFail($request->route('knowledge_source'));
 
         if ($source->storage_path !== null) {
-            Storage::disk((string) config('filesystems.default'))->delete($source->storage_path);
+            Storage::disk((string) config('filesystems.knowledge_disk'))->delete($source->storage_path);
         }
 
         $source->delete();

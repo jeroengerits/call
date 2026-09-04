@@ -7,6 +7,7 @@ export type TelephonyAgent = {
     knowledge: string | null;
     isActive: boolean;
     phoneNumbersCount: number;
+    knowledgeSourcesCount: number;
     updateUrl?: string;
     knowledgeUrl?: string;
 };

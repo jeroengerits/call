@@ -15,6 +15,8 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    'knowledge_disk' => env('KNOWLEDGE_FILESYSTEM_DISK', 'knowledge_private'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -34,6 +36,13 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'serve' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'knowledge_private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/knowledge'),
             'throw' => false,
             'report' => false,
         ],

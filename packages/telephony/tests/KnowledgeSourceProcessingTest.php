@@ -50,8 +50,8 @@ class KnowledgeSourceProcessingTest extends TestCase
 
     public function test_plain_text_attachments_are_processed_to_ready(): void
     {
-        Storage::fake();
-        Storage::put('knowledge/guide.md', '# Guide\n\nPlain text.');
+        Storage::fake('knowledge_private');
+        Storage::disk('knowledge_private')->put('knowledge/guide.md', '# Guide\n\nPlain text.');
         $source = AgentKnowledgeSource::factory()->create([
             'type' => KnowledgeSourceType::Attachment,
             'content' => null,
@@ -117,8 +117,8 @@ class KnowledgeSourceProcessingTest extends TestCase
 
     public function test_pdf_and_unsupported_attachments_fail_safely(): void
     {
-        Storage::fake();
-        Storage::put('knowledge/manual.pdf', '%PDF');
+        Storage::fake('knowledge_private');
+        Storage::disk('knowledge_private')->put('knowledge/manual.pdf', '%PDF');
         $source = AgentKnowledgeSource::factory()->create([
             'type' => KnowledgeSourceType::Attachment,
             'content' => null,
@@ -136,8 +136,8 @@ class KnowledgeSourceProcessingTest extends TestCase
 
     public function test_unsupported_attachments_are_persisted_as_failed(): void
     {
-        Storage::fake();
-        Storage::put('knowledge/manual.docx', 'binary content');
+        Storage::fake('knowledge_private');
+        Storage::disk('knowledge_private')->put('knowledge/manual.docx', 'binary content');
         $source = AgentKnowledgeSource::factory()->create([
             'type' => KnowledgeSourceType::Attachment,
             'content' => null,
@@ -180,7 +180,20 @@ class KnowledgeSourceProcessingTest extends TestCase
 
         $source->refresh();
         $this->assertSame(KnowledgeSourceStatus::Failed, $source->status);
-        $this->assertSame('Worker timed out.', $source->error_message);
+        $this->assertSame('Knowledge source processing failed.', $source->error_message);
         $this->assertNull($source->processing_at);
+    }
+
+    public function test_untrusted_processing_errors_are_not_persisted(): void
+    {
+        Http::fake(['https://example.com/down' => Http::failedConnection()]);
+        $source = AgentKnowledgeSource::factory()->create([
+            'type' => KnowledgeSourceType::Url,
+            'url' => 'https://example.com/down',
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
+
+        $this->assertSame('Knowledge source processing failed.', $source->refresh()->error_message);
     }
 }

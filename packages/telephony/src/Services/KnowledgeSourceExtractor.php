@@ -37,9 +37,13 @@ class KnowledgeSourceExtractor
             throw new RuntimeException('URL knowledge source has no URL.');
         }
 
-        $this->urlSafety->assertSafe($source->url);
+        $parts = parse_url($source->url);
+        $host = (string) ($parts['host'] ?? '');
+        $port = (int) ($parts['port'] ?? (strtolower((string) ($parts['scheme'] ?? '')) === 'https' ? 443 : 80));
+        $address = $this->urlSafety->safeAddress($source->url);
 
         $response = Http::withoutRedirecting()
+            ->withOptions(['curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$address}"]]])
             ->connectTimeout(5)
             ->timeout(10)
             ->get($source->url);
@@ -68,7 +72,7 @@ class KnowledgeSourceExtractor
             throw new RuntimeException('Attachment has no storage path.');
         }
 
-        $disk = Storage::disk((string) config('filesystems.default'));
+        $disk = Storage::disk((string) config('filesystems.knowledge_disk'));
 
         if (! $disk->exists($source->storage_path)) {
             throw new RuntimeException('Attachment is unavailable in storage.');
