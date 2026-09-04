@@ -131,10 +131,12 @@ function LanguagePicker({
     value,
     onChange,
     invalid,
+    describedBy,
 }: {
     value: string;
     onChange: (value: string) => void;
     invalid: boolean;
+    describedBy?: string;
 }) {
     const [open, setOpen] = useState(false);
     const selected = languages.find(([language]) => language === value);
@@ -149,6 +151,7 @@ function LanguagePicker({
                     role="combobox"
                     aria-expanded={open}
                     aria-invalid={invalid}
+                    aria-describedby={describedBy}
                     className="w-full justify-between font-normal"
                 >
                     {selected?.[1] ?? 'Select a language'}
@@ -254,6 +257,10 @@ function AgentFormDialog({
                                 onChange={(event) =>
                                     form.setData('name', event.target.value)
                                 }
+                                aria-invalid={Boolean(form.errors.name)}
+                                aria-describedby={
+                                    form.errors.name ? 'name-error' : undefined
+                                }
                                 required
                             />
                         </Field>
@@ -270,6 +277,11 @@ function AgentFormDialog({
                                     form.setData('language', value)
                                 }
                                 invalid={Boolean(form.errors.language)}
+                                describedBy={
+                                    form.errors.language
+                                        ? 'language-error'
+                                        : undefined
+                                }
                             />
                         </Field>
                     </div>
@@ -284,6 +296,12 @@ function AgentFormDialog({
                             onChange={(event) =>
                                 form.setData('greeting', event.target.value)
                             }
+                            aria-invalid={Boolean(form.errors.greeting)}
+                            aria-describedby={
+                                form.errors.greeting
+                                    ? 'greeting-error'
+                                    : undefined
+                            }
                         />
                     </Field>
                     <Field
@@ -296,6 +314,12 @@ function AgentFormDialog({
                             value={form.data.instructions}
                             onChange={(event) =>
                                 form.setData('instructions', event.target.value)
+                            }
+                            aria-invalid={Boolean(form.errors.instructions)}
+                            aria-describedby={
+                                form.errors.instructions
+                                    ? 'instructions-error'
+                                    : undefined
                             }
                         />
                     </Field>
