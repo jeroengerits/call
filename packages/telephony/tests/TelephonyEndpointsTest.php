@@ -113,6 +113,7 @@ class TelephonyEndpointsTest extends TestCase
             'language' => 'en-US',
             'greeting' => 'Hello',
             'instructions' => 'Be concise',
+            'knowledge' => 'Legacy inline knowledge must be ignored.',
         ]);
 
         $response->assertRedirect();
@@ -137,6 +138,7 @@ class TelephonyEndpointsTest extends TestCase
             'language' => 'en-US',
             'greeting' => 'Welcome',
             'instructions' => 'Be brief',
+            'knowledge' => 'Legacy inline knowledge must not replace managed data.',
         ]);
 
         $response->assertRedirect();
