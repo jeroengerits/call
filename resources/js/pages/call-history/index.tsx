@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Clock3, Phone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,10 +25,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import type { TelephonyCall } from '@/types';
+import { index as phoneNumbers } from '@/routes/phone-numbers';
 
 type Props = { calls: TelephonyCall[]; limit: number };
 
 export default function CallHistoryIndex({ calls, limit }: Props) {
+    const { currentTeam } = usePage().props;
     return (
         <>
             <Head title="Call history" />
@@ -78,7 +80,13 @@ export default function CallHistoryIndex({ calls, limit }: Props) {
                                         </EmptyDescription>
                                     </EmptyHeader>
                                     <Button asChild variant="outline">
-                                        <Link href="../phone-numbers">
+                                        <Link
+                                            href={
+                                                phoneNumbers(
+                                                    currentTeam?.slug ?? '',
+                                                ).url
+                                            }
+                                        >
                                             Set up a phone number{' '}
                                             <ArrowRight data-icon="inline-end" />
                                         </Link>

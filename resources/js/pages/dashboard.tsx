@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, BookOpen, Bot, Phone } from 'lucide-react';
 import { useState } from 'react';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
@@ -11,6 +11,9 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { dashboard } from '@/routes';
+import { index as agents } from '@/routes/agents';
+import { index as knowledge } from '@/routes/knowledge';
+import { index as phoneNumbers } from '@/routes/phone-numbers';
 import type { DashboardInvitation, TelephonyData } from '@/types';
 
 type Props = {
@@ -23,6 +26,8 @@ export default function Dashboard({
     telephony,
 }: Props) {
     const [showInvitations, setShowInvitations] = useState(true);
+    const { currentTeam } = usePage().props;
+    const teamSlug = currentTeam?.slug ?? '';
 
     return (
         <>
@@ -70,7 +75,7 @@ export default function Dashboard({
                                     </CardDescription>
                                 </div>
                                 <Button asChild>
-                                    <Link href="../phone-numbers">
+                                    <Link href={phoneNumbers(teamSlug).url}>
                                         <Phone data-icon="inline-start" />
                                         Set up phone numbers
                                     </Link>
@@ -86,21 +91,21 @@ export default function Dashboard({
                             icon={Phone}
                             title="Phone numbers"
                             description={`${telephony.phoneNumbers.length} connected`}
-                            href="../phone-numbers"
+                            href={phoneNumbers(teamSlug).url}
                             action="Manage numbers"
                         />
                         <SetupCard
                             icon={Bot}
                             title="Agents"
                             description={`${telephony.agents.length} configured`}
-                            href="../agents"
+                            href={agents(teamSlug).url}
                             action="Configure agents"
                         />
                         <SetupCard
                             icon={BookOpen}
                             title="Knowledge"
                             description="Connect sources to your agents"
-                            href="../knowledge"
+                            href={knowledge(teamSlug).url}
                             action="Manage knowledge"
                         />
                     </section>

@@ -5,7 +5,10 @@ namespace Tests\Feature\Teams;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
+use Call\Telephony\Models\Agent;
+use Call\Telephony\Models\AgentKnowledgeSource;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -157,6 +160,26 @@ class TeamTest extends TestCase
         $this->assertSoftDeleted('teams', [
             'id' => $team->id,
         ]);
+    }
+
+    public function test_team_deletion_removes_private_knowledge_files(): void
+    {
+        Storage::fake('knowledge_private');
+        config(['filesystems.knowledge_disk' => 'knowledge_private']);
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $agent = Agent::factory()->for($team)->create();
+        $source = AgentKnowledgeSource::factory()->for($agent)->create([
+            'storage_path' => 'knowledge/'.$agent->id.'/guide.txt',
+        ]);
+        Storage::disk('knowledge_private')->put($source->storage_path, 'guide');
+
+        $this->actingAs($user)
+            ->delete(route('teams.destroy', $team), ['name' => $team->name])
+            ->assertRedirect();
+
+        Storage::disk('knowledge_private')->assertMissing($source->storage_path);
     }
 
     public function test_team_deletion_requires_name_confirmation()

@@ -26,7 +26,7 @@ class CallHistoryController extends Controller
                     'status' => $call->status,
                     'summary' => $call->summary,
                     'outcome' => $call->outcome,
-                    'agentName' => $call->agent->name,
+                    'agentName' => $call->agent?->name,
                     'phoneNumber' => $call->phoneNumber->number,
                     'startedAt' => $call->started_at?->toISOString(),
                     'endedAt' => $call->ended_at?->toISOString(),

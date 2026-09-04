@@ -16,7 +16,7 @@ class StorePhoneNumberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'agent_id' => ['required', 'integer', 'exists:agents,id'],
+            'agent_id' => ['nullable', 'integer', 'exists:agents,id'],
             'number' => [
                 'required',
                 'string',

@@ -184,6 +184,25 @@ class KnowledgeSourceProcessingTest extends TestCase
         $this->assertSame('Attachment format is not supported for text extraction.', $source->error_message);
     }
 
+    public function test_plain_text_attachments_respect_the_configured_byte_limit(): void
+    {
+        config(['telephony.knowledge.max_text_bytes' => 4]);
+        Storage::fake('knowledge_private');
+        Storage::disk('knowledge_private')->put('knowledge/oversized.txt', '12345');
+        $source = AgentKnowledgeSource::factory()->create([
+            'type' => KnowledgeSourceType::Attachment,
+            'content' => null,
+            'storage_path' => 'knowledge/oversized.txt',
+            'original_filename' => 'oversized.txt',
+            'mime_type' => 'text/plain',
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
+
+        $this->assertSame(KnowledgeSourceStatus::Failed, $source->refresh()->status);
+        $this->assertSame('Text knowledge source exceeds the configured size limit.', $source->error_message);
+    }
+
     public function test_stale_processing_sources_can_be_reclaimed(): void
     {
         Http::fake(['https://example.com/stale' => Http::response('Recovered content.')]);

@@ -5,7 +5,7 @@ The Telephony package provides the team-owned voice domain used by the applicati
 ## Responsibilities
 
 - Store agent configuration, including one editable knowledge text field.
-- Store manually assigned Twilio phone numbers.
+- Store team-owned Twilio phone numbers, including numbers awaiting agent assignment.
 - Store call history and JSON message transcripts.
 - Store private agent knowledge sources from text, URLs, and supported attachments.
 - Provide team-scoped dashboard data and creation endpoints.
@@ -17,7 +17,7 @@ The package does not purchase or port phone numbers, call Twilio, parse PDFs, ma
 ## Models
 
 - `Agent` belongs to a team and has many phone numbers and calls.
-- `PhoneNumber` belongs to a team and agent.
+- `PhoneNumber` belongs to a team and may be assigned to an agent later.
 - `Call` belongs to a team, agent, and phone number.
 - `AgentKnowledgeSource` belongs to an agent and stores its processed content and source status.
 
@@ -36,3 +36,4 @@ This repository registers the package as a local Composer path repository. After
 - `2026_09_04_000005_add_processing_at_to_agent_knowledge_sources_table`
 
 Knowledge attachments use the dedicated `filesystems.knowledge_disk` configuration key, which defaults to the private `knowledge_private` disk and is independent of the application default disk.
+Plain-text source content and plain-text attachments are limited by `telephony.knowledge.max_text_bytes`; deleting an agent or team also removes private source files.

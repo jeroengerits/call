@@ -15,8 +15,8 @@ export type TelephonyAgent = {
 export type TelephonyPhoneNumber = {
     id: number;
     number: string;
-    agentId: number;
-    agentName: string;
+    agentId: number | null;
+    agentName: string | null;
     isActive: boolean;
 };
 

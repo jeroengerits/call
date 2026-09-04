@@ -3,6 +3,7 @@
 namespace Call\Telephony\Http\Controllers;
 
 use App\Models\Team;
+use Call\Telephony\Http\Requests\DeletePhoneNumberRequest;
 use Call\Telephony\Http\Requests\StorePhoneNumberRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class PhoneNumberController extends Controller
                     'id' => $phoneNumber->id,
                     'number' => $phoneNumber->number,
                     'agentId' => $phoneNumber->agent_id,
-                    'agentName' => $phoneNumber->agent->name,
+                    'agentName' => $phoneNumber->agent?->name,
                     'isActive' => $phoneNumber->is_active,
                     'updateUrl' => route('phone-numbers.update', [
                         'current_team' => $team->slug,
@@ -41,11 +42,14 @@ class PhoneNumberController extends Controller
     public function store(StorePhoneNumberRequest $request): RedirectResponse
     {
         $team = $this->team($request->route('current_team'));
-        $agent = $team->agents()->findOrFail($request->validated('agent_id'));
+        $agentId = $request->validated('agent_id');
+
+        if ($agentId !== null) {
+            $team->agents()->findOrFail($agentId);
+        }
 
         $team->phoneNumbers()->create([
             ...$request->validated(),
-            'agent_id' => $agent->id,
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Phone number added.')]);
@@ -57,14 +61,27 @@ class PhoneNumberController extends Controller
     {
         $team = $this->team($request->route('current_team'));
         $phoneNumber = $team->phoneNumbers()->findOrFail($request->route('phone_number'));
-        $agent = $team->agents()->findOrFail($request->validated('agent_id'));
+        $agentId = $request->validated('agent_id');
+
+        if ($agentId !== null) {
+            $team->agents()->findOrFail($agentId);
+        }
 
         $phoneNumber->update([
             ...$request->validated(),
-            'agent_id' => $agent->id,
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Phone number updated.')]);
+
+        return back();
+    }
+
+    public function destroy(DeletePhoneNumberRequest $request): RedirectResponse
+    {
+        $team = $this->team($request->route('current_team'));
+        $team->phoneNumbers()->findOrFail($request->route('phone_number'))->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Phone number removed.')]);
 
         return back();
     }

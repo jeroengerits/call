@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import { ArrowLeft, Phone, Search, Users } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useDeferredValue, useState } from 'react';
@@ -31,6 +31,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -38,6 +48,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import type { TelephonyAgent, TelephonyPhoneNumber } from '@/types';
+import { dashboard } from '@/routes';
+import { destroy as destroyPhoneNumber } from '@/routes/phone-numbers';
 
 type PhoneNumber = TelephonyPhoneNumber & { updateUrl?: string };
 type Props = {
@@ -60,7 +72,7 @@ function NumberDialog({
 }) {
     const [open, setOpen] = useState(false);
     const form = useForm<NumberInput>({
-        agent_id: number ? String(number.agentId) : '',
+        agent_id: number?.agentId != null ? String(number.agentId) : '',
         number: number?.number ?? '',
     });
     function submit(event: FormEvent<HTMLFormElement>): void {
@@ -87,7 +99,7 @@ function NumberDialog({
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
-                        {number ? 'Edit phone number' : 'Assign a phone number'}
+                        {number ? 'Edit phone number' : 'Add a phone number'}
                     </DialogTitle>
                     <DialogDescription>
                         Add a number already owned by your team.
@@ -99,13 +111,19 @@ function NumberDialog({
                         <Select
                             value={form.data.agent_id}
                             onValueChange={(value) =>
-                                form.setData('agent_id', value)
+                                form.setData(
+                                    'agent_id',
+                                    value === '__unassigned' ? '' : value,
+                                )
                             }
                         >
                             <SelectTrigger id="number-agent">
-                                <SelectValue placeholder="Select an agent" />
+                                <SelectValue placeholder="Leave unassigned" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="__unassigned">
+                                    Leave unassigned
+                                </SelectItem>
                                 {agents.map((agent) => (
                                     <SelectItem
                                         key={agent.id}
@@ -141,10 +159,7 @@ function NumberDialog({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            type="submit"
-                            disabled={form.processing || !form.data.agent_id}
-                        >
+                        <Button type="submit" disabled={form.processing}>
                             {form.processing
                                 ? 'Saving...'
                                 : number
@@ -184,9 +199,14 @@ export default function PhoneNumbersIndex({
     storeUrl,
 }: Props) {
     const [query, setQuery] = useState('');
+    const [numberToDelete, setNumberToDelete] = useState<PhoneNumber | null>(
+        null,
+    );
+    const { currentTeam } = usePage().props;
+    const teamSlug = currentTeam?.slug ?? '';
     const deferredQuery = useDeferredValue(query.trim().toLowerCase());
     const filteredNumbers = phoneNumbers.filter((phoneNumber) =>
-        [phoneNumber.number, phoneNumber.agentName].some((value) =>
+        [phoneNumber.number, phoneNumber.agentName ?? ''].some((value) =>
             value.toLowerCase().includes(deferredQuery),
         ),
     );
@@ -202,7 +222,7 @@ export default function PhoneNumbersIndex({
                     <header className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <Link
-                                href="../dashboard"
+                                href={dashboard(teamSlug).url}
                                 className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-2 text-sm"
                             >
                                 <ArrowLeft className="size-4" /> Back to
@@ -253,7 +273,8 @@ export default function PhoneNumbersIndex({
                                 </CardTitle>
                                 <CardDescription>
                                     {filteredNumbers.length} of{' '}
-                                    {phoneNumbers.length} assigned to this team.
+                                    {phoneNumbers.length} connected to this
+                                    team.
                                 </CardDescription>
                             </div>
                             <div className="relative w-full sm:w-72">
@@ -322,15 +343,30 @@ export default function PhoneNumbersIndex({
                                                     </Badge>
                                                 </div>
                                                 <p className="text-muted-foreground mt-1 text-sm">
-                                                    {number.agentName} ·{' '}
+                                                    {number.agentName ??
+                                                        'Unassigned'}
                                                 </p>
                                             </div>
-                                            <NumberDialog
-                                                number={number}
-                                                agents={agents}
-                                                action={number.updateUrl}
-                                                storeUrl={storeUrl}
-                                            />
+                                            <div className="flex gap-2">
+                                                <NumberDialog
+                                                    number={number}
+                                                    agents={agents}
+                                                    action={number.updateUrl}
+                                                    storeUrl={storeUrl}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setNumberToDelete(
+                                                            number,
+                                                        )
+                                                    }
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -339,6 +375,44 @@ export default function PhoneNumbersIndex({
                     </Card>
                 </div>
             </main>
+            <AlertDialog
+                open={numberToDelete !== null}
+                onOpenChange={(open) => !open && setNumberToDelete(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Remove this phone number?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will remove {numberToDelete?.number} from this
+                            team.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (numberToDelete) {
+                                    router.delete(
+                                        destroyPhoneNumber([
+                                            teamSlug,
+                                            numberToDelete.id,
+                                        ]).url,
+                                        {
+                                            preserveScroll: true,
+                                            onFinish: () =>
+                                                setNumberToDelete(null),
+                                        },
+                                    );
+                                }
+                            }}
+                        >
+                            Remove number
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

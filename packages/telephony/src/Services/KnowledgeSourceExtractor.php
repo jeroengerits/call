@@ -80,7 +80,10 @@ class KnowledgeSourceExtractor
             throw new RuntimeException('Attachment is unavailable in storage.');
         }
 
-        return $disk->get($source->storage_path);
+        $content = $disk->get($source->storage_path);
+        $this->assertContentSize($content);
+
+        return $content;
     }
 
     private function isPlainTextAttachment(string $mimeType, string $filename): bool

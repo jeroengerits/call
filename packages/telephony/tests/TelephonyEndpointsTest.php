@@ -9,6 +9,8 @@ use Call\Telephony\Enums\KnowledgeSourceType;
 use Call\Telephony\Jobs\ProcessAgentKnowledgeSource;
 use Call\Telephony\Models\Agent;
 use Call\Telephony\Models\AgentKnowledgeSource;
+use Call\Telephony\Models\Call as CallModel;
+use Call\Telephony\Models\PhoneNumber;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -112,6 +114,52 @@ class TelephonyEndpointsTest extends TestCase
             'agent_id' => $agent->id,
             'number' => '+15550101234',
         ]);
+    }
+
+    public function test_a_team_member_can_create_an_unassigned_phone_number_before_agents_exist(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+
+        $this->actingAs($user)
+            ->post(route('phone-numbers.store', $team), ['number' => '+15550109999'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('phone_numbers', [
+            'team_id' => $team->id,
+            'agent_id' => null,
+            'number' => '+15550109999',
+        ]);
+    }
+
+    public function test_a_team_member_can_delete_a_phone_number(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $phoneNumber = PhoneNumber::factory()->for($team)->create();
+
+        $this->actingAs($user)
+            ->delete(route('phone-numbers.destroy', [$team, $phoneNumber]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('phone_numbers', ['id' => $phoneNumber->id]);
+    }
+
+    public function test_a_team_member_can_delete_an_agent_and_its_related_records(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+        $phoneNumber = PhoneNumber::factory()->for($team)->for($agent, 'agent')->create();
+        $call = CallModel::factory()->for($team)->for($agent)->for($phoneNumber)->create();
+
+        $this->actingAs($user)
+            ->delete(route('agents.destroy', [$team, $agent]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('agents', ['id' => $agent->id]);
+        $this->assertDatabaseMissing('phone_numbers', ['id' => $phoneNumber->id]);
+        $this->assertDatabaseMissing('calls', ['id' => $call->id]);
     }
 
     public function test_a_phone_number_cannot_be_assigned_to_an_agent_from_another_team(): void
@@ -315,6 +363,22 @@ class TelephonyEndpointsTest extends TestCase
                 'type' => 'attachment',
                 'title' => 'Large guide',
                 'attachment' => UploadedFile::fake()->create('guide.pdf', 10241),
+            ])
+            ->assertSessionHasErrors(['attachment']);
+    }
+
+    public function test_plain_text_attachments_are_rejected_over_the_configured_byte_limit(): void
+    {
+        config(['telephony.knowledge.max_text_bytes' => 4]);
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+
+        $this->actingAs($user)
+            ->post(route('knowledge-sources.store', [$team, $agent]), [
+                'type' => 'attachment',
+                'title' => 'Oversized text',
+                'attachment' => UploadedFile::fake()->createWithContent('guide.txt', '12345'),
             ])
             ->assertSessionHasErrors(['attachment']);
     }

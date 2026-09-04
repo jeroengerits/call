@@ -25,6 +25,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'error_message',
     'processing_at',
 ])]
+/**
+ * @property string|null $storage_path
+ */
 class AgentKnowledgeSource extends Model
 {
     /** @use HasFactory<AgentKnowledgeSourceFactory> */

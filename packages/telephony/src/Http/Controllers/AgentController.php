@@ -3,6 +3,7 @@
 namespace Call\Telephony\Http\Controllers;
 
 use App\Models\Team;
+use Call\Telephony\Http\Requests\DeleteAgentRequest;
 use Call\Telephony\Http\Requests\StoreAgentRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,6 +66,16 @@ class AgentController extends Controller
         $agent->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Agent updated.')]);
+
+        return back();
+    }
+
+    public function destroy(DeleteAgentRequest $request): RedirectResponse
+    {
+        $team = $this->team($request->route('current_team'));
+        $team->agents()->findOrFail($request->route('agent'))->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Agent deleted.')]);
 
         return back();
     }

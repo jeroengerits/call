@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, BookOpen, RefreshCw, Trash2 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
@@ -34,6 +34,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { index as agents } from '@/routes/agents';
+import {
+    destroy as destroySource,
+    retry as retrySource,
+} from '@/routes/knowledge-sources';
 
 type Source = {
     id: number;
@@ -229,12 +234,17 @@ export default function KnowledgeSourcesIndex({
 }: Props) {
     const [sourceToDelete, setSourceToDelete] = useState<Source | null>(null);
     const endpoint = storeUrl ?? `${window.location.pathname}`;
+    const { currentTeam } = usePage().props;
+    const teamSlug = currentTeam?.slug ?? '';
     const remove = () => {
         if (!sourceToDelete) return;
-        router.delete(`${endpoint}/${sourceToDelete.id}`, {
-            preserveScroll: true,
-            onFinish: () => setSourceToDelete(null),
-        });
+        router.delete(
+            destroySource([teamSlug, agent.id, sourceToDelete.id]).url,
+            {
+                preserveScroll: true,
+                onFinish: () => setSourceToDelete(null),
+            },
+        );
     };
 
     return (
@@ -244,7 +254,7 @@ export default function KnowledgeSourcesIndex({
                 <div className="mx-auto flex max-w-5xl flex-col gap-6">
                     <header className="border-b pb-6">
                         <Link
-                            href="../../"
+                            href={agents(teamSlug).url}
                             className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-2 text-sm"
                         >
                             <ArrowLeft className="size-4" aria-hidden="true" />
@@ -353,7 +363,11 @@ export default function KnowledgeSourcesIndex({
                                                         size="sm"
                                                         onClick={() =>
                                                             router.post(
-                                                                `${endpoint}/${source.id}/retry`,
+                                                                retrySource([
+                                                                    teamSlug,
+                                                                    agent.id,
+                                                                    source.id,
+                                                                ]).url,
                                                                 {},
                                                                 {
                                                                     preserveScroll: true,

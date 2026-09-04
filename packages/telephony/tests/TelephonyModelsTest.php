@@ -12,6 +12,7 @@ use Call\Telephony\Models\PhoneNumber;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TelephonyModelsTest extends TestCase
@@ -87,7 +88,7 @@ class TelephonyModelsTest extends TestCase
         $phoneNumber = PhoneNumber::factory()->create();
         $call = CallModel::factory()->create();
 
-        $this->assertSame($phoneNumber->team_id, $phoneNumber->agent->team_id);
+        $this->assertNull($phoneNumber->agent_id);
         $this->assertSame($call->team_id, $call->agent->team_id);
         $this->assertSame($call->team_id, $call->phoneNumber->team_id);
         $this->assertSame($call->agent_id, $call->phoneNumber->agent_id);
@@ -112,6 +113,26 @@ class TelephonyModelsTest extends TestCase
         $agent->delete();
 
         $this->assertDatabaseMissing('agent_knowledge_sources', ['id' => $source->id]);
+    }
+
+    public function test_deleting_an_agent_cascades_calls_and_phone_numbers_and_files(): void
+    {
+        Storage::fake('knowledge_private');
+        config(['filesystems.knowledge_disk' => 'knowledge_private']);
+        $agent = Agent::factory()->create();
+        $phoneNumber = PhoneNumber::factory()->for($agent->team)->for($agent, 'agent')->create();
+        $call = CallModel::factory()->for($agent->team)->for($agent)->for($phoneNumber)->create();
+        $source = AgentKnowledgeSource::factory()->for($agent)->create([
+            'storage_path' => 'knowledge/'.$agent->id.'/guide.txt',
+        ]);
+        Storage::disk('knowledge_private')->put($source->storage_path, 'guide');
+
+        $agent->delete();
+
+        $this->assertDatabaseMissing('phone_numbers', ['id' => $phoneNumber->id]);
+        $this->assertDatabaseMissing('calls', ['id' => $call->id]);
+        $this->assertDatabaseMissing('agent_knowledge_sources', ['id' => $source->id]);
+        Storage::disk('knowledge_private')->assertMissing($source->storage_path);
     }
 
     public function test_package_migrations_can_be_reversed_and_reapplied(): void
