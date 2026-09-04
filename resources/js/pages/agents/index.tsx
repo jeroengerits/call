@@ -79,7 +79,6 @@ type AgentInput = {
     language: string;
     greeting: string;
     instructions: string;
-    knowledge: string;
 };
 
 const languages = [
@@ -210,7 +209,6 @@ function AgentFormDialog({
         language: agent?.language ?? 'en-US',
         greeting: agent?.greeting ?? '',
         instructions: agent?.instructions ?? '',
-        knowledge: agent?.knowledge ?? '',
     });
     const endpoint = action ?? storeUrl;
 
@@ -297,21 +295,6 @@ function AgentFormDialog({
                             value={form.data.instructions}
                             onChange={(event) =>
                                 form.setData('instructions', event.target.value)
-                            }
-                        />
-                    </Field>
-                    <Field
-                        id="knowledge"
-                        label="Knowledge"
-                        error={form.errors.knowledge}
-                        description="One editable text field for the MVP."
-                    >
-                        <Textarea
-                            id="knowledge"
-                            className="min-h-36"
-                            value={form.data.knowledge}
-                            onChange={(event) =>
-                                form.setData('knowledge', event.target.value)
                             }
                         />
                     </Field>

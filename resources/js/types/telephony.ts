@@ -4,7 +4,6 @@ export type TelephonyAgent = {
     language: string;
     greeting: string | null;
     instructions: string | null;
-    knowledge: string | null;
     isActive: boolean;
     phoneNumbersCount: number;
     knowledgeSourcesCount: number;

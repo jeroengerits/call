@@ -106,7 +106,6 @@ class TelephonyEndpointsTest extends TestCase
             'language' => 'en-US',
             'greeting' => 'Hello',
             'instructions' => 'Be concise',
-            'knowledge' => 'Opening hours are 9 to 5.',
         ]);
 
         $response->assertRedirect();
@@ -114,7 +113,50 @@ class TelephonyEndpointsTest extends TestCase
         $this->assertDatabaseHas('agents', [
             'team_id' => $team->id,
             'name' => 'Reception',
+            'knowledge' => null,
         ]);
+    }
+
+    public function test_a_team_member_can_update_an_agent_without_managing_inline_knowledge(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create([
+            'knowledge' => 'Existing managed data.',
+        ]);
+
+        $response = $this->actingAs($user)->patch(route('agents.update', [$team, $agent]), [
+            'name' => 'Updated reception',
+            'language' => 'en-US',
+            'greeting' => 'Welcome',
+            'instructions' => 'Be brief',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('agents', [
+            'id' => $agent->id,
+            'name' => 'Updated reception',
+            'knowledge' => 'Existing managed data.',
+        ]);
+    }
+
+    public function test_agent_index_excludes_inline_knowledge_from_the_managed_form_contract(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create([
+            'knowledge' => 'Existing managed data.',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('agents.index', $team))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('agents/index')
+                ->where('agents.0.id', $agent->id)
+                ->missing('agents.0.knowledge'),
+            );
     }
 
     public function test_a_team_member_can_assign_a_phone_number_to_a_team_agent(): void

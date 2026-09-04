@@ -28,7 +28,6 @@ class AgentController extends Controller
                     'language' => $agent->language,
                     'greeting' => $agent->greeting,
                     'instructions' => $agent->instructions,
-                    'knowledge' => $agent->knowledge,
                     'isActive' => $agent->is_active,
                     'phoneNumbersCount' => $agent->phone_numbers_count,
                     'knowledgeSourcesCount' => $agent->knowledge_sources_count,

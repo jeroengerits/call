@@ -21,7 +21,6 @@ class StoreAgentRequest extends FormRequest
             'language' => ['required', Rule::enum(Language::class)],
             'greeting' => ['nullable', 'string'],
             'instructions' => ['nullable', 'string'],
-            'knowledge' => ['nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
