@@ -32,6 +32,20 @@ class KnowledgeSourceProcessingTest extends TestCase
         $this->assertNull($source->error_message);
     }
 
+    public function test_text_sources_over_the_limit_fail_safely(): void
+    {
+        config(['telephony.knowledge.max_text_bytes' => 4]);
+        $source = AgentKnowledgeSource::factory()->create([
+            'type' => KnowledgeSourceType::Text,
+            'content' => '12345',
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
+
+        $this->assertSame(KnowledgeSourceStatus::Failed, $source->refresh()->status);
+        $this->assertSame('Text knowledge source exceeds the configured size limit.', $source->error_message);
+    }
+
     public function test_url_sources_fetch_body_with_successful_response(): void
     {
         Http::fake(['https://example.com/guide' => Http::response('Remote guide content.', 200)]);
@@ -80,6 +94,23 @@ class KnowledgeSourceProcessingTest extends TestCase
         $source->refresh();
         $this->assertSame(KnowledgeSourceStatus::Failed, $source->status);
         $this->assertSame('URL fetch failed with HTTP status 404.', $source->error_message);
+        $this->assertNull($source->content);
+    }
+
+    public function test_url_responses_over_the_limit_fail_before_storage(): void
+    {
+        config(['telephony.knowledge.max_url_response_bytes' => 4]);
+        Http::fake(['https://example.com/large' => Http::response('12345', 200)]);
+        $source = AgentKnowledgeSource::factory()->create([
+            'type' => KnowledgeSourceType::Url,
+            'content' => null,
+            'url' => 'https://example.com/large',
+        ]);
+
+        (new ProcessAgentKnowledgeSource($source))->handle(app(KnowledgeSourceExtractor::class));
+
+        $this->assertSame(KnowledgeSourceStatus::Failed, $source->refresh()->status);
+        $this->assertSame('URL response exceeds the configured size limit.', $source->error_message);
         $this->assertNull($source->content);
     }
 
@@ -167,6 +198,20 @@ class KnowledgeSourceProcessingTest extends TestCase
 
         $this->assertSame(KnowledgeSourceStatus::Ready, $source->refresh()->status);
         $this->assertNull($source->processing_at);
+    }
+
+    public function test_current_processing_sources_are_not_claimed_again(): void
+    {
+        $source = AgentKnowledgeSource::factory()->create([
+            'status' => KnowledgeSourceStatus::Processing,
+            'processing_at' => now(),
+        ]);
+        $extractor = \Mockery::mock(KnowledgeSourceExtractor::class);
+        $extractor->shouldReceive('extract')->never();
+
+        (new ProcessAgentKnowledgeSource($source))->handle($extractor);
+
+        $this->assertSame(KnowledgeSourceStatus::Processing, $source->refresh()->status);
     }
 
     public function test_queue_failure_marks_processing_source_as_failed(): void

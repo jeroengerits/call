@@ -9,6 +9,7 @@ use Call\Telephony\Enums\KnowledgeSourceType;
 use Call\Telephony\Jobs\ProcessAgentKnowledgeSource;
 use Call\Telephony\Models\Agent;
 use Call\Telephony\Models\AgentKnowledgeSource;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -209,6 +210,48 @@ class TelephonyEndpointsTest extends TestCase
                 'title' => 'Support guide',
             ])
             ->assertSessionHasErrors(['url']);
+    }
+
+    public function test_text_knowledge_sources_reject_content_over_the_configured_byte_limit(): void
+    {
+        config(['telephony.knowledge.max_text_bytes' => 4]);
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+
+        $this->actingAs($user)
+            ->post(route('knowledge-sources.store', [$team, $agent]), [
+                'type' => 'text',
+                'title' => 'Oversized guide',
+                'content' => '12345',
+            ])
+            ->assertSessionHasErrors(['content']);
+
+        $this->assertDatabaseCount('agent_knowledge_sources', 0);
+    }
+
+    public function test_source_is_marked_failed_when_processing_cannot_be_dispatched(): void
+    {
+        $dispatcher = \Mockery::mock(Dispatcher::class);
+        $dispatcher->shouldReceive('dispatch')->once()->andThrow(new \RuntimeException('Queue unavailable.'));
+        $this->app->instance(Dispatcher::class, $dispatcher);
+
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+
+        $this->actingAs($user)
+            ->post(route('knowledge-sources.store', [$team, $agent]), [
+                'type' => 'text',
+                'title' => 'Support guide',
+                'content' => 'Use the support portal.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['source']);
+
+        $source = AgentKnowledgeSource::query()->firstOrFail();
+        $this->assertSame(KnowledgeSourceStatus::Failed, $source->status);
+        $this->assertSame('Knowledge source could not be queued.', $source->error_message);
     }
 
     public function test_url_knowledge_sources_reject_private_addresses_and_irrelevant_fields(): void

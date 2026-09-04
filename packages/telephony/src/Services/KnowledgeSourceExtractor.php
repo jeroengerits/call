@@ -28,6 +28,8 @@ class KnowledgeSourceExtractor
             throw new RuntimeException('Text knowledge source has no content.');
         }
 
+        $this->assertContentSize($source->content);
+
         return $source->content;
     }
 
@@ -52,7 +54,7 @@ class KnowledgeSourceExtractor
             throw new RuntimeException($this->urlFailureMessage($response));
         }
 
-        return $response->body();
+        return $this->readResponseBody($response);
     }
 
     private function extractAttachment(AgentKnowledgeSource $source): string
@@ -90,5 +92,34 @@ class KnowledgeSourceExtractor
     private function urlFailureMessage(Response $response): string
     {
         return sprintf('URL fetch failed with HTTP status %d.', $response->status());
+    }
+
+    private function assertContentSize(string $content): void
+    {
+        if (strlen($content) > (int) config('telephony.knowledge.max_text_bytes')) {
+            throw new RuntimeException('Text knowledge source exceeds the configured size limit.');
+        }
+    }
+
+    private function readResponseBody(Response $response): string
+    {
+        $limit = (int) config('telephony.knowledge.max_url_response_bytes');
+        $stream = $response->toPsrResponse()->getBody();
+
+        $contentLength = $response->header('Content-Length');
+        if ($contentLength !== null && (int) $contentLength > $limit) {
+            throw new RuntimeException('URL response exceeds the configured size limit.');
+        }
+
+        $content = '';
+        while (! $stream->eof()) {
+            $content .= $stream->read(min(8192, $limit + 1 - strlen($content)));
+
+            if (strlen($content) > $limit) {
+                throw new RuntimeException('URL response exceeds the configured size limit.');
+            }
+        }
+
+        return $content;
     }
 }

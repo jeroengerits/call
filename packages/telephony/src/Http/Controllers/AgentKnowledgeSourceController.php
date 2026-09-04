@@ -81,7 +81,21 @@ class AgentKnowledgeSourceController extends Controller
             throw $exception;
         }
 
-        ProcessAgentKnowledgeSource::dispatch($source);
+        try {
+            ProcessAgentKnowledgeSource::dispatch($source);
+        } catch (Throwable) {
+            $source->update([
+                'status' => KnowledgeSourceStatus::Failed,
+                'error_message' => 'Knowledge source could not be queued.',
+                'processing_at' => null,
+            ]);
+
+            if ($storagePath !== null) {
+                Storage::disk((string) config('filesystems.knowledge_disk'))->delete($storagePath);
+            }
+
+            return back()->withErrors(['source' => 'Knowledge source could not be queued.']);
+        }
 
         return back();
     }

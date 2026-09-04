@@ -22,7 +22,16 @@ class StoreKnowledgeSourceRequest extends FormRequest
             'type' => ['required', Rule::enum(KnowledgeSourceType::class)],
             'title' => ['required', 'string', 'max:255'],
             'url' => ['nullable', 'required_if:type,url', 'url', 'max:2048'],
-            'content' => ['nullable', 'required_if:type,text', 'string'],
+            'content' => [
+                'nullable',
+                'required_if:type,text',
+                'string',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && strlen($value) > (int) config('telephony.knowledge.max_text_bytes')) {
+                        $fail('The content exceeds the maximum allowed size.');
+                    }
+                },
+            ],
             'attachment' => [
                 'nullable',
                 'required_if:type,attachment',
