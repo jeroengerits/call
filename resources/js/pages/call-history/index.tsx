@@ -1,7 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, Clock3, Phone, Radio } from 'lucide-react';
-import { useState } from 'react';
-import PendingInvitationsModal from '@/components/pending-invitations-modal';
+import { ArrowRight, Clock3, Phone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,91 +24,45 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
-import type { DashboardInvitation, TelephonyData } from '@/types';
+import type { TelephonyCall } from '@/types';
 
-type Props = {
-    pendingInvitations?: DashboardInvitation[];
-    telephony: TelephonyData;
-};
+type Props = { calls: TelephonyCall[]; limit: number };
 
-export default function Dashboard({
-    pendingInvitations = [],
-    telephony,
-}: Props) {
-    const [showInvitations, setShowInvitations] = useState(true);
-
+export default function CallHistoryIndex({ calls, limit }: Props) {
     return (
         <>
             <Head title="Call history" />
-            <PendingInvitationsModal
-                invitations={pendingInvitations}
-                open={pendingInvitations.length > 0 && showInvitations}
-                onOpenChange={setShowInvitations}
-            />
             <main className="bg-muted/20 min-h-full px-4 py-6 sm:px-6 lg:px-8">
                 <div className="mx-auto flex max-w-7xl flex-col gap-6">
-                    <header className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <div className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-medium tracking-[0.18em] uppercase">
-                                <Radio aria-hidden="true" /> Call history
-                            </div>
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                Every conversation, in one place.
-                            </h1>
-                            <p className="text-muted-foreground mt-2 max-w-2xl">
-                                Review your team&apos;s latest calls and follow
-                                up where it matters.
-                            </p>
-                        </div>
-                        {pendingInvitations.length > 0 && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowInvitations(true)}
-                            >
-                                Review invitations
-                            </Button>
-                        )}
+                    <header className="border-b pb-6">
+                        <h1 className="text-3xl font-semibold tracking-tight">
+                            Call history
+                        </h1>
+                        <p className="text-muted-foreground mt-2">
+                            Review the latest conversations handled by your
+                            team&apos;s agents.
+                        </p>
                     </header>
-                    {telephony.phoneNumbers.length === 0 && (
-                        <Card className="border-primary/30">
-                            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <CardTitle className="text-base">
-                                        Make your first call possible
-                                    </CardTitle>
-                                    <CardDescription className="mt-1">
-                                        Set up a phone number before creating an
-                                        agent. You can still edit agents at any
-                                        time.
-                                    </CardDescription>
-                                </div>
-                                <Button asChild>
-                                    <Link href="../phone-numbers">
-                                        <Phone data-icon="inline-start" />
-                                        Set up phone numbers
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
-
                     <Card>
-                        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Clock3 aria-hidden="true" /> Recent calls
+                                    <Clock3
+                                        className="size-5"
+                                        aria-hidden="true"
+                                    />
+                                    Recent calls
                                 </CardTitle>
                                 <CardDescription>
-                                    The latest 20 conversations for this team.
+                                    Showing up to the latest {limit} calls.
                                 </CardDescription>
                             </div>
                             <Badge variant="outline">
-                                {telephony.calls.length} recorded
+                                {calls.length} recorded
                             </Badge>
                         </CardHeader>
                         <CardContent className="p-0">
-                            {telephony.calls.length === 0 ? (
+                            {calls.length === 0 ? (
                                 <Empty className="min-h-72 border-0">
                                     <EmptyHeader>
                                         <EmptyMedia variant="icon">
@@ -120,14 +72,14 @@ export default function Dashboard({
                                             No calls recorded
                                         </EmptyTitle>
                                         <EmptyDescription>
-                                            Calls will appear here once your
+                                            Calls will appear here when your
                                             telephony webhook starts writing
                                             call records.
                                         </EmptyDescription>
                                     </EmptyHeader>
                                     <Button asChild variant="outline">
-                                        <Link href="../agents">
-                                            Configure an agent{' '}
+                                        <Link href="../phone-numbers">
+                                            Set up a phone number{' '}
                                             <ArrowRight data-icon="inline-end" />
                                         </Link>
                                     </Button>
@@ -142,18 +94,19 @@ export default function Dashboard({
                                                 <TableHead>Number</TableHead>
                                                 <TableHead>Status</TableHead>
                                                 <TableHead>Started</TableHead>
+                                                <TableHead>Summary</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {telephony.calls.map((call) => (
+                                            {calls.map((call) => (
                                                 <TableRow key={call.id}>
-                                                    <TableCell className="font-medium">
+                                                    <TableCell className="font-medium whitespace-nowrap">
                                                         {call.callerNumber}
                                                     </TableCell>
                                                     <TableCell>
                                                         {call.agentName}
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="whitespace-nowrap">
                                                         {call.phoneNumber}
                                                     </TableCell>
                                                     <TableCell>
@@ -168,12 +121,17 @@ export default function Dashboard({
                                                             {call.status}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell className="text-muted-foreground">
+                                                    <TableCell className="text-muted-foreground whitespace-nowrap">
                                                         {call.startedAt
                                                             ? new Date(
                                                                   call.startedAt,
                                                               ).toLocaleString()
                                                             : 'Not started'}
+                                                    </TableCell>
+                                                    <TableCell className="max-w-xs text-sm">
+                                                        {call.summary ??
+                                                            call.outcome ??
+                                                            'No summary'}
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -188,12 +146,3 @@ export default function Dashboard({
         </>
     );
 }
-
-Dashboard.layout = (props: { currentTeam?: { slug: string } | null }) => ({
-    breadcrumbs: [
-        {
-            title: 'Call history',
-            href: props.currentTeam ? dashboard(props.currentTeam.slug) : '/',
-        },
-    ],
-});

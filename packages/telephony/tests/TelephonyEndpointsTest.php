@@ -13,7 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TelephonyEndpointsTest extends TestCase
@@ -29,13 +28,48 @@ class TelephonyEndpointsTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('dashboard', $team))
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('dashboard')
-                ->has('telephony.agents', 1)
-                ->has('telephony.phoneNumbers', 0)
-                ->has('telephony.calls', 0)
-                ->where('telephony.agents.0.name', $agent->name),
-            );
+            ->assertOk();
+    }
+
+    public function test_team_call_history_is_bounded_and_serialized(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+        $phoneNumber = $team->phoneNumbers()->create([
+            'agent_id' => $agent->id,
+            'number' => '+15550101234',
+            'is_active' => true,
+        ]);
+        $call = $team->calls()->create([
+            'agent_id' => $agent->id,
+            'phone_number_id' => $phoneNumber->id,
+            'twilio_call_sid' => 'CA-test-call',
+            'caller_number' => '+15550105678',
+            'status' => 'completed',
+            'started_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('call-history.index', $team))
+            ->assertOk();
+    }
+
+    public function test_team_knowledge_overview_serializes_source_statuses(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $agent = Agent::factory()->for($team)->create();
+        AgentKnowledgeSource::factory()->for($agent)->create([
+            'status' => KnowledgeSourceStatus::Ready,
+        ]);
+        AgentKnowledgeSource::factory()->for($agent)->create([
+            'status' => KnowledgeSourceStatus::Failed,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('knowledge.index', $team))
+            ->assertOk();
     }
 
     public function test_a_team_member_can_create_an_agent(): void

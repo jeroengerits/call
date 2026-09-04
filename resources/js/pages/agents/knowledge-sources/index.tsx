@@ -1,5 +1,19 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { ArrowLeft, BookOpen, RefreshCw, Trash2 } from 'lucide-react';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
+import InputError from '@/components/input-error';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,67 +23,253 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Empty,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
-type Agent = {
+type Source = {
     id: number;
-    name: string;
-};
-
-type KnowledgeSource = {
-    id: number;
-    type: string;
+    type: 'url' | 'text' | 'attachment';
     title: string | null;
     url: string | null;
     originalFilename: string | null;
     fileSize: number | null;
-    status: string;
+    status: 'pending' | 'processing' | 'ready' | 'failed';
     errorMessage: string | null;
 };
-
 type Props = {
-    agent: Agent;
-    knowledgeSources: KnowledgeSource[];
+    agent: { id: number; name: string };
+    knowledgeSources: Source[];
+    storeUrl?: string;
+};
+type SourceInput = {
+    type: Source['type'];
+    title: string;
+    url: string;
+    content: string;
+    attachment: File | null;
 };
 
-function label(value: string): string {
-    return value.charAt(0).toUpperCase() + value.slice(1);
+const labels: Record<Source['type'], string> = {
+    url: 'URL',
+    text: 'Text',
+    attachment: 'Attachment',
+};
+
+function statusVariant(
+    status: Source['status'],
+): 'default' | 'secondary' | 'destructive' | 'outline' {
+    return status === 'failed'
+        ? 'destructive'
+        : status === 'ready'
+          ? 'default'
+          : 'secondary';
 }
 
-function formatFileSize(fileSize: number | null): string | null {
-    if (fileSize === null) {
-        return null;
+function formatFileSize(size: number | null): string | null {
+    if (size === null) return null;
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function SourceForm({
+    storeUrl,
+    onSuccess,
+}: {
+    storeUrl: string;
+    onSuccess: () => void;
+}) {
+    const form = useForm<SourceInput>({
+        type: 'url',
+        title: '',
+        url: '',
+        content: '',
+        attachment: null,
+    });
+
+    function submit(event: FormEvent<HTMLFormElement>): void {
+        event.preventDefault();
+        form.post(storeUrl, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                onSuccess();
+            },
+        });
     }
 
-    if (fileSize < 1024) {
-        return `${fileSize} B`;
-    }
-
-    return `${(fileSize / 1024).toFixed(1)} KB`;
+    return (
+        <form onSubmit={submit} className="grid gap-5">
+            <div className="grid gap-2">
+                <Label htmlFor="source-type">Source type</Label>
+                <Select
+                    value={form.data.type}
+                    onValueChange={(value: Source['type']) =>
+                        form.setData('type', value)
+                    }
+                >
+                    <SelectTrigger
+                        id="source-type"
+                        aria-describedby="source-type-description"
+                    >
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {(Object.keys(labels) as Source['type'][]).map(
+                            (type) => (
+                                <SelectItem key={type} value={type}>
+                                    {labels[type]}
+                                </SelectItem>
+                            ),
+                        )}
+                    </SelectContent>
+                </Select>
+                <p
+                    id="source-type-description"
+                    className="text-muted-foreground text-xs"
+                >
+                    Choose how this source should be added to the agent.
+                </p>
+                <InputError id="source-type-error" message={form.errors.type} />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="source-title">Title</Label>
+                <Input
+                    id="source-title"
+                    value={form.data.title}
+                    onChange={(event) =>
+                        form.setData('title', event.target.value)
+                    }
+                    aria-invalid={Boolean(form.errors.title)}
+                    aria-describedby={
+                        form.errors.title ? 'source-title-error' : undefined
+                    }
+                    required
+                />
+                <InputError
+                    id="source-title-error"
+                    message={form.errors.title}
+                />
+            </div>
+            {form.data.type === 'url' && (
+                <div className="grid gap-2">
+                    <Label htmlFor="source-url">URL</Label>
+                    <Input
+                        id="source-url"
+                        type="url"
+                        placeholder="https://example.com/help"
+                        value={form.data.url}
+                        onChange={(event) =>
+                            form.setData('url', event.target.value)
+                        }
+                        aria-invalid={Boolean(form.errors.url)}
+                        aria-describedby={
+                            form.errors.url ? 'source-url-error' : undefined
+                        }
+                        required
+                    />
+                    <InputError
+                        id="source-url-error"
+                        message={form.errors.url}
+                    />
+                </div>
+            )}
+            {form.data.type === 'text' && (
+                <div className="grid gap-2">
+                    <Label htmlFor="source-content">Text content</Label>
+                    <Textarea
+                        id="source-content"
+                        className="min-h-36"
+                        value={form.data.content}
+                        onChange={(event) =>
+                            form.setData('content', event.target.value)
+                        }
+                        aria-invalid={Boolean(form.errors.content)}
+                        aria-describedby={
+                            form.errors.content
+                                ? 'source-content-error'
+                                : undefined
+                        }
+                        required
+                    />
+                    <InputError
+                        id="source-content-error"
+                        message={form.errors.content}
+                    />
+                </div>
+            )}
+            {form.data.type === 'attachment' && (
+                <div className="grid gap-2">
+                    <Label htmlFor="source-attachment">Attachment</Label>
+                    <Input
+                        id="source-attachment"
+                        type="file"
+                        accept=".txt,.md,.pdf,.csv,.json"
+                        onChange={(event) =>
+                            form.setData(
+                                'attachment',
+                                event.target.files?.[0] ?? null,
+                            )
+                        }
+                        aria-invalid={Boolean(form.errors.attachment)}
+                        aria-describedby="source-attachment-help source-attachment-error"
+                        required
+                    />
+                    <p
+                        id="source-attachment-help"
+                        className="text-muted-foreground text-xs"
+                    >
+                        TXT, MD, PDF, CSV, or JSON up to 10 MB.
+                    </p>
+                    <InputError
+                        id="source-attachment-error"
+                        message={form.errors.attachment}
+                    />
+                </div>
+            )}
+            <Button type="submit" disabled={form.processing}>
+                {form.processing ? 'Adding source...' : 'Add source'}
+            </Button>
+        </form>
+    );
 }
 
 export default function KnowledgeSourcesIndex({
     agent,
     knowledgeSources,
+    storeUrl,
 }: Props) {
-    function sourceUrl(sourceId: number, action?: string): string {
-        return `${window.location.pathname}/${sourceId}${action ? `/${action}` : ''}`;
-    }
-
-    function retry(sourceId: number): void {
-        router.post(sourceUrl(sourceId, 'retry'), {}, { preserveScroll: true });
-    }
-
-    function remove(sourceId: number): void {
-        if (window.confirm('Remove this knowledge source?')) {
-            router.delete(sourceUrl(sourceId), { preserveScroll: true });
-        }
-    }
+    const [sourceToDelete, setSourceToDelete] = useState<Source | null>(null);
+    const endpoint = storeUrl ?? `${window.location.pathname}`;
+    const remove = () => {
+        if (!sourceToDelete) return;
+        router.delete(`${endpoint}/${sourceToDelete.id}`, {
+            preserveScroll: true,
+            onFinish: () => setSourceToDelete(null),
+        });
+    };
 
     return (
         <>
             <Head title={`Knowledge sources · ${agent.name}`} />
             <main className="bg-muted/20 min-h-full px-4 py-6 sm:px-6 lg:px-8">
-                <div className="mx-auto flex max-w-4xl flex-col gap-6">
+                <div className="mx-auto flex max-w-5xl flex-col gap-6">
                     <header className="border-b pb-6">
                         <Link
                             href="../../"
@@ -82,144 +282,185 @@ export default function KnowledgeSourcesIndex({
                             Knowledge sources
                         </h1>
                         <p className="text-muted-foreground mt-2">
-                            Sources connected to {agent.name}.
+                            Give {agent.name} reliable context from documents,
+                            websites, and notes.
                         </p>
                     </header>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BookOpen
-                                    className="size-5"
-                                    aria-hidden="true"
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <BookOpen
+                                        className="size-5"
+                                        aria-hidden="true"
+                                    />
+                                    Add a source
+                                </CardTitle>
+                                <CardDescription>
+                                    Sources are processed before they become
+                                    available to calls.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <SourceForm
+                                    storeUrl={endpoint}
+                                    onSuccess={() => undefined}
                                 />
-                                Sources
-                            </CardTitle>
-                            <CardDescription>
-                                {knowledgeSources.length} source
-                                {knowledgeSources.length === 1 ? '' : 's'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-3">
-                            {knowledgeSources.length === 0 ? (
-                                <p className="text-muted-foreground py-8 text-center">
-                                    No knowledge sources have been added yet.
-                                </p>
-                            ) : (
-                                knowledgeSources.map((source) => (
-                                    <article
-                                        key={source.id}
-                                        className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between"
-                                    >
-                                        <div className="min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <h2 className="font-medium">
-                                                    {source.title ||
-                                                        'Untitled source'}
-                                                </h2>
-                                                <Badge variant="outline">
-                                                    {label(source.type)}
-                                                </Badge>
-                                                <Badge
-                                                    variant={
-                                                        source.status ===
-                                                        'failed'
-                                                            ? 'destructive'
-                                                            : source.status ===
-                                                                'ready'
-                                                              ? 'default'
-                                                              : 'secondary'
-                                                    }
-                                                >
-                                                    {label(source.status)}
-                                                </Badge>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Connected sources</CardTitle>
+                                <CardDescription>
+                                    {knowledgeSources.length} source
+                                    {knowledgeSources.length === 1 ? '' : 's'}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid gap-3">
+                                {knowledgeSources.length === 0 ? (
+                                    <Empty className="py-8">
+                                        <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                                <BookOpen aria-hidden="true" />
+                                            </EmptyMedia>
+                                            <EmptyTitle>
+                                                No sources yet
+                                            </EmptyTitle>
+                                            <EmptyDescription>
+                                                Add a URL, text note, or
+                                                attachment to start building
+                                                this agent&apos;s knowledge.
+                                            </EmptyDescription>
+                                        </EmptyHeader>
+                                    </Empty>
+                                ) : (
+                                    knowledgeSources.map((source) => (
+                                        <article
+                                            key={source.id}
+                                            className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between"
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h2 className="font-medium">
+                                                        {source.title ||
+                                                            'Untitled source'}
+                                                    </h2>
+                                                    <Badge variant="outline">
+                                                        {labels[source.type]}
+                                                    </Badge>
+                                                    <Badge
+                                                        variant={statusVariant(
+                                                            source.status,
+                                                        )}
+                                                    >
+                                                        {source.status}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-muted-foreground mt-2 truncate text-sm">
+                                                    {source.url ??
+                                                        source.originalFilename ??
+                                                        formatFileSize(
+                                                            source.fileSize,
+                                                        ) ??
+                                                        'Text source'}
+                                                </p>
+                                                {source.errorMessage && (
+                                                    <p
+                                                        className="text-destructive mt-1 text-sm"
+                                                        role="alert"
+                                                    >
+                                                        {source.errorMessage}
+                                                    </p>
+                                                )}
                                             </div>
-                                            <dl className="text-muted-foreground mt-2 grid gap-1 text-sm">
-                                                {source.originalFilename ? (
-                                                    <div>
-                                                        <dt className="sr-only">
-                                                            Filename
-                                                        </dt>
-                                                        <dd>
-                                                            {
-                                                                source.originalFilename
-                                                            }
-                                                        </dd>
-                                                    </div>
-                                                ) : null}
-                                                {source.url ? (
-                                                    <div className="truncate">
-                                                        <dt className="sr-only">
-                                                            URL
-                                                        </dt>
-                                                        <dd>{source.url}</dd>
-                                                    </div>
-                                                ) : null}
-                                                {formatFileSize(
-                                                    source.fileSize,
-                                                ) ? (
-                                                    <div>
-                                                        <dt className="sr-only">
-                                                            File size
-                                                        </dt>
-                                                        <dd>
-                                                            {formatFileSize(
-                                                                source.fileSize,
-                                                            )}
-                                                        </dd>
-                                                    </div>
-                                                ) : null}
-                                                {source.errorMessage ? (
-                                                    <div className="text-destructive">
-                                                        <dt className="sr-only">
-                                                            Error
-                                                        </dt>
-                                                        <dd>
-                                                            {
-                                                                source.errorMessage
-                                                            }
-                                                        </dd>
-                                                    </div>
-                                                ) : null}
-                                            </dl>
-                                        </div>
-                                        <div className="flex shrink-0 gap-2">
-                                            {source.status === 'failed' ? (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        retry(source.id)
+                                            <div className="flex shrink-0 gap-2">
+                                                {source.status === 'failed' && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            router.post(
+                                                                `${endpoint}/${source.id}/retry`,
+                                                                {},
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        <RefreshCw
+                                                            data-icon="inline-start"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Retry
+                                                    </Button>
+                                                )}
+                                                <AlertDialog
+                                                    open={
+                                                        sourceToDelete?.id ===
+                                                        source.id
                                                     }
+                                                    onOpenChange={(open) => {
+                                                        if (!open)
+                                                            setSourceToDelete(
+                                                                null,
+                                                            );
+                                                    }}
                                                 >
-                                                    <RefreshCw
-                                                        data-icon="inline-start"
-                                                        aria-hidden="true"
-                                                    />
-                                                    Retry
-                                                </Button>
-                                            ) : null}
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    remove(source.id)
-                                                }
-                                            >
-                                                <Trash2
-                                                    data-icon="inline-start"
-                                                    aria-hidden="true"
-                                                />
-                                                Remove
-                                            </Button>
-                                        </div>
-                                    </article>
-                                ))
-                            )}
-                        </CardContent>
-                    </Card>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                setSourceToDelete(
+                                                                    source,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2
+                                                                data-icon="inline-start"
+                                                                aria-hidden="true"
+                                                            />
+                                                            Remove
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>
+                                                                Remove this
+                                                                source?
+                                                            </AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This will
+                                                                permanently
+                                                                remove{' '}
+                                                                {source.title ||
+                                                                    'this knowledge source'}{' '}
+                                                                from{' '}
+                                                                {agent.name}.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>
+                                                                Cancel
+                                                            </AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={remove}
+                                                            >
+                                                                Remove source
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </article>
+                                    ))
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </main>
         </>

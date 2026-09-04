@@ -27,6 +27,10 @@ class AgentKnowledgeSourceController extends Controller
                 'id' => $agent->id,
                 'name' => $agent->name,
             ],
+            'storeUrl' => route('knowledge-sources.store', [
+                'current_team' => $team->slug,
+                'agent' => $agent,
+            ]),
             'knowledgeSources' => $agent->knowledgeSources()
                 ->latest()
                 ->get()

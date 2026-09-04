@@ -1,0 +1,31 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "call/telephony",
+    "description": "Team-owned agents, phone numbers, and call records.",
+    "type": "library",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "illuminate/database": "^13.0",
+        "illuminate/support": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Call\\Telephony\\": "src/",
+            "Call\\Telephony\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Call\\Telephony\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Call\\Telephony\\TelephonyServiceProvider"
+            ]
+        }
+    }
+}
